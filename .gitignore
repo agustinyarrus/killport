@@ -1,0 +1,15 @@
+# Binarios: se generan con build.ps1 (los ejecutables van a los Releases, no al repo)
+/dist/
+*.exe
+*.test
+*.out
+
+# Temporales de la escritura atómica (fsx.WriteAtomic)
+.*.tmp
+
+# Editores y sistema
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
