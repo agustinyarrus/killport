@@ -1,0 +1,31 @@
+
+Instantánea del estado del servicio HTTP (vista de cola de solicitudes): 
+----------------------------------------------------------------------- 
+
+Nombre de cola de solicitudes: la cola de solicitudes no tiene nombre.
+    Versión: 1.0
+    Estado: Active
+    Nivel de detalle de cola de solicitudes 503: Básica
+    Número máx. de solicitudes: 1000
+    Solicitudes activas: 0
+    Solicitudes en cola: 0
+    Antigüedad máxima de solicitudes en cola: 0s
+    Solicitudes recibidas: 1
+    Solicitudes rechazadas: 0
+    Aciertos de caché: 0
+    Número de procesos activos adjuntos: 1
+    Procesos:
+        Id.: 6528, imagen: <?>
+        Servicios: SSDPSRV
+        Servicio etiquetado: SSDPSRV
+    Grupos de direcciones URL:
+    Id. de grupo de direcciones URL: FE00000020000023
+        Estado: Active
+        Nombre de cola de solicitudes: la cola de solicitudes no tiene nombre.
+            Número de direcciones URL registradas: 1
+            Direcciones URL registradas:
+                HTTP://*:2869/UPNP/EVENTING/
+        Id. de sesión del servidor: FF0000001000003B
+            Versión: 1.0
+            Estado: Active
+

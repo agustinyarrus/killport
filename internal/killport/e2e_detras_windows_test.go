@@ -41,9 +41,11 @@ type reporteE2E struct {
 		Puerto    uint16 `json:"puerto"`
 		Estado    string `json:"estado"`
 		Motivo    string `json:"motivo"`
+		Consejo   string `json:"consejo"`
 		Reservado *struct {
 			Inicio, Fin  uint16
 			Administrada bool
+			Origen       string
 		} `json:"reservado"`
 		Remedios []struct{ Comando, Efecto string } `json:"remedios"`
 	} `json:"puertos"`
@@ -163,6 +165,26 @@ func TestE2EHTTPSys(t *testing.T) {
 	if o := rep.Objetivos[0]; o.Tipo != "proceso" || o.PID != pid || o.Proceso != "httpfalso.exe" ||
 		o.Via == nil || o.Via.PID != 4 || !slices.Contains(o.URLs, url) || o.Impostor != "" {
 		t.Fatalf("el objetivo = %+v (vía %+v), esperaba a httpfalso.exe (PID %d) con %s\n%s", o, o.Via, pid, url, out)
+	}
+
+	// 1b. Mientras http.sys atiende el puerto, Windows lo aparta con una
+	// exclusión de un solo puerto (sin "*"), y es suya: el adaptador lo dice
+	// con la URL que la cola tiene registrada. No es un bloque de WinNAT.
+	sys, err := nuevoSistema()
+	if err != nil {
+		t.Fatal(err)
+	}
+	xs, err := sys.Excluded()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fam := range []ports.Family{ports.IPv4, ports.IPv6} {
+		switch x, ok := xs.Find(ports.TCP, fam, uint16(port)); {
+		case !ok:
+			t.Logf("este Windows no aparta el %s %v mientras http.sys lo atiende", P, fam)
+		case x.Range != ports.R(uint16(port), uint16(port)) || x.Administered || x.Origin() != ports.OriginHTTP || x.HTTP.URL != url:
+			t.Errorf("la exclusión del %s %v = %+v (%v), esperaba la de http.sys con %s", P, fam, x, x.Origin(), url)
+		}
 	}
 
 	// 2. El listado general no esconde el servidor detrás de "System".
@@ -612,6 +634,9 @@ func TestE2EPuertoSinDueno(t *testing.T) {
 	for i, x := range antes {
 		switch {
 		case x.Family != ports.IPv4:
+		case !x.Administered && x.Origin() != ports.OriginWinNAT:
+			// Lo que aparta http.sys (el 2869 de SSDP, que va y viene) o un
+			// programa: no es de WinNAT y lo prueba TestE2EReservaDeUnPrograma.
 		case !x.Administered && x.Proto == ports.TCP:
 			bloquesTCP = append(bloquesTCP, &antes[i])
 		case !x.Administered && x.Proto == ports.UDP && bloqueUDP == nil:
@@ -659,9 +684,8 @@ func TestE2EPuertoSinDueno(t *testing.T) {
 			t.Logf("el %s UDP ya no figura reservado (%s): WinNAT cambió sus bloques mientras tanto", P, pr.Estado)
 		}
 	}
-	// Un rango excluido también puede tener dueño: el 2869 aparece excluido
-	// mientras SSDPSRV lo escucha por http.sys, y ahí killport dice, con razón,
-	// que el puerto está en uso y no se toca. Lo que sigue prueba un puerto
+	// Un bloque de WinNAT puede tener un dueño de más, que llegó después (o
+	// lo que escucha el kernel en ese puerto). Lo que sigue prueba un puerto
 	// reservado y SIN dueño: el primer bloque que killport vea así.
 	for _, b := range bloquesTCP {
 		P := strconv.Itoa(int(b.Lo + (b.Hi-b.Lo)/2))
@@ -686,7 +710,7 @@ func TestE2EPuertoSinDueno(t *testing.T) {
 		}
 		switch pr := rep.Puertos[0]; pr.Estado {
 		case "reservado":
-			if pr.Reservado == nil || pr.Reservado.Inicio != bloque.Lo || pr.Reservado.Fin != bloque.Hi || pr.Reservado.Administrada ||
+			if pr.Reservado == nil || pr.Reservado.Inicio != bloque.Lo || pr.Reservado.Fin != bloque.Hi || pr.Reservado.Administrada || pr.Reservado.Origen != "winnat" ||
 				!strings.Contains(pr.Motivo, "WinNAT") || len(pr.Remedios) < 2 || pr.Remedios[0].Comando != "killport "+P+" --reserve" {
 				t.Errorf("el %s (bloque %s) = %+v\n%s", P, bloque.Range, pr, out)
 			}

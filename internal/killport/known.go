@@ -29,6 +29,11 @@ type sospechoso struct {
 	que       string   // qué es, en una frase que sigue a "es …"
 	como      string   // cómo se libera o se evita, si hay una forma propia; "" si no
 	fuente    string   // de dónde sale el dato
+	// windows: es un servicio de Windows que atiende por http.sys. Además de
+	// explicar al dueño, dice para qué es la exclusión de un solo puerto que
+	// http.sys pone mientras lo atiende, aunque el servicio no esté a la vista
+	// (ver usoDeWindows).
+	windows bool
 }
 
 // sospechosos va de lo más específico a lo más general: gana la primera
@@ -60,10 +65,27 @@ var sospechosos = []sospechoso{
 		fuente: "Stack Overflow 20558410",
 	},
 	{
-		servicios: []string{"winrm"}, puertos: []uint16{5985, 5986},
+		servicios: []string{"winrm"}, puertos: []uint16{5985, 5986, 47001}, windows: true,
 		que:    "la administración remota de Windows (WinRM)",
 		como:   "si no la usás, `Disable-PSRemoting -Force` en un PowerShell de administrador",
 		fuente: "documentación de WinRM",
+	},
+	{
+		servicios: []string{"ssdpsrv", "upnphost"}, puertos: []uint16{2869}, windows: true,
+		que:    "SSDP (UPnP), el descubrimiento de dispositivos de la red",
+		como:   "Windows lo atiende mientras algún programa sigue los avisos de un dispositivo UPnP (el router, un televisor) o esta PC comparte uno, y lo suelta solo: sin romper nada, usá otro puerto",
+		fuente: "documentación de UPnP en Windows (eventos en el 2869); visto en esta PC: la cola de SSDPSRV con http://*:2869/UPNP/EVENTING/",
+	},
+	{
+		servicios: []string{"fdrespub", "fdphost"}, puertos: []uint16{5357, 5358}, windows: true,
+		que:    "WSD, con el que la detección de redes publica esta PC",
+		como:   "Windows lo atiende mientras la detección de redes está activada y lo suelta al apagarla: sin romper nada, usá otro puerto",
+		fuente: "documentación de Function Discovery (WSD en el 5357 y el 5358)",
+	},
+	{
+		servicios: []string{"wmpnetworksvc"}, puertos: []uint16{10243, 10245}, windows: true,
+		que:    "el uso compartido de multimedia del Reproductor de Windows Media",
+		fuente: "reservas de URL de Windows (http://+:10243/WMPNSSv4/)",
 	},
 	{
 		imagenes: []string{"skype.exe"}, puertos: []uint16{80, 443},
@@ -148,6 +170,21 @@ func coincide(patrones []string, nombre string) bool {
 		}
 	}
 	return false
+}
+
+// usoDeWindows busca para qué es un puerto que atiende http.sys: el servicio de
+// Windows que lo usa (por su nombre, si se sabe; si no, solo por el puerto).
+func usoDeWindows(servicio string, puerto uint16) (sospechoso, bool) {
+	servicio = strings.ToLower(strings.TrimSpace(servicio))
+	for _, s := range sospechosos {
+		if !s.windows || !s.enPuertos(ports.Of(puerto)) {
+			continue
+		}
+		if servicio == "" || coincide(s.servicios, servicio) {
+			return s, true
+		}
+	}
+	return sospechoso{}, false
 }
 
 // texto es la línea que se muestra: "es IIS, el servidor web de Windows: …".

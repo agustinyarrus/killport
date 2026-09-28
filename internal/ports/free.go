@@ -13,8 +13,9 @@ import (
 //     un bind común a 0.0.0.0:3000 atarse (la tabla de Microsoft: específica
 //     primero y comodín después = éxito); el segundo servidor arranca sin
 //     error y el navegador sigue llegando al primero;
-//   - reservado por WinNAT para Hyper-V, WSL o Docker: bind da "acceso
-//     denegado" y nadie figura como dueño;
+//   - reservado por WinNAT para Hyper-V, WSL o Docker, por http.sys mientras
+//     lo atiende, o por un programa: bind da "acceso denegado" y, salvo el de
+//     http.sys, nadie figura como dueño;
 //   - en el rango dinámico: Windows lo reparte como puerto de salida, y en
 //     cualquier momento lo toma una conexión saliente;
 //   - apartado a mano (una exclusión administrada, la de `killport --reserve`):
@@ -71,7 +72,7 @@ type SkipWhy uint8
 
 const (
 	SkipTaken        SkipWhy = iota + 1 // un socket de la tabla lo tiene
-	SkipWinNAT                          // cae en un bloque que excluyó WinNAT (sin "*")
+	SkipReserved                        // cae en una exclusión sin "*": de WinNAT, de http.sys o de un programa (Excluded.Origin)
 	SkipAdministered                    // cae en una exclusión administrada ("*": apartado a mano)
 	SkipDynamic                         // cae en el rango dinámico (y el rango no se pidió explícito)
 	SkipProbe                           // no figura en nada, pero el bind exclusivo no lo ató
@@ -85,7 +86,7 @@ type Skip struct {
 	// una conexión que lo usa de puerto local). Los puertos seguidos del mismo
 	// proceso van en un solo tramo.
 	Socket   Socket
-	Excluded ExcludedRange // SkipWinNAT y SkipAdministered: la fila entera
+	Excluded ExcludedRange // SkipReserved y SkipAdministered: la fila entera
 	Dynamic  DynamicRange  // SkipDynamic: el rango entero
 	// SkipProbe: dónde y cómo falló el sondeo.
 	Proto  Proto
@@ -225,9 +226,10 @@ func blockersOf(protos []Proto, explicit bool, start uint16, w FreeWorld) blocke
 		i = j + 1
 	}
 
-	// Excluidos: los bloques de WinNAT antes que las exclusiones a mano.
+	// Excluidos: lo que reserva Windows (WinNAT, http.sys, un programa) antes
+	// que las exclusiones a mano.
 	for _, admin := range [...]bool{false, true} {
-		why := SkipWinNAT
+		why := SkipReserved
 		if admin {
 			why = SkipAdministered
 		}

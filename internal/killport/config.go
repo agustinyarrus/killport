@@ -194,13 +194,14 @@ func administradas(x ports.Exclusions, c combo) ports.Set {
 	return ports.NewSet(rs...)
 }
 
-// bloques son los rangos excluidos NO administrados de ese combo: los que
-// reservó WinNAT (u otro componente de Windows) por su cuenta.
-func bloquesDe(x ports.Exclusions, c combo) []ports.Range {
-	var rs []ports.Range
+// bloquesDe son las filas NO administradas de ese combo: las que Windows
+// aparta por su cuenta (WinNAT, http.sys, la reserva de un programa; de quién
+// es cada una lo dice Origin).
+func bloquesDe(x ports.Exclusions, c combo) []ports.ExcludedRange {
+	var rs []ports.ExcludedRange
 	for _, r := range x {
 		if r.Proto == c.proto && r.Family == c.fam && !r.Administered {
-			rs = append(rs, r.Range)
+			rs = append(rs, r)
 		}
 	}
 	return rs
@@ -365,14 +366,20 @@ func planificarConfig(e estadoRed, ped pedidoConfig) planConfig {
 		}
 		for _, r := range faltan.Ranges() {
 			for _, b := range bloquesDe(e.Excl, c) {
-				if seCruzan(r, b) {
+				switch {
+				case !seCruzan(r, b.Range):
+				case b.Origin() != ports.OriginWinNAT:
+					// Lo que aparta http.sys o un programa no se va deteniendo
+					// WinNAT: ni se ofrece cortarles la red a WSL y Docker.
+					pl.Impedimentos = append(pl.Impedimentos, porQueNoReservo(r, c, b))
+				default:
 					tapado = true
 					if !e.WinnatCorriendo {
 						winnat := "que está detenido"
 						if !e.WinnatExiste {
 							winnat = "esta máquina no lo tiene"
 						}
-						pl.Impedimentos = append(pl.Impedimentos, r.String()+" "+c.String()+" cae en el rango excluido "+b.String()+
+						pl.Impedimentos = append(pl.Impedimentos, r.String()+" "+c.String()+" cae en el rango excluido "+b.Range.String()+
 							", y no es de WinNAT ("+winnat+"): no sé quién lo reservó, así que no lo toco")
 					}
 				}

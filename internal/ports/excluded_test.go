@@ -44,6 +44,82 @@ func TestExcludedSalidaReal(t *testing.T) {
 	}
 }
 
+// De quién es cada fila, sobre tablas REALES de esta máquina:
+//
+//   - _ssdp: la de las 19:06 del 28/9/2026, con SSDP atendiendo el 2869 por
+//     http.sys (una fila de un puerto) y los seis bloques de WinNAT;
+//   - _mezcla: las tres clases a la vez, armadas a propósito y sin
+//     administrador: un programa con una reserva de 7 puertos
+//     (SIO_ACQUIRE_PORT_RESERVATION, 47111–47117), un HttpListener en
+//     localhost:47230, localhost:47231 y 127.0.0.1:47233 (tres filas de un
+//     puerto: vecinas, y también en IPv6 la atada a 127.0.0.1) y los bloques
+//     de WinNAT.
+//
+// La forma sola separa WinNAT (100) de lo demás; que una fila de un puerto sea
+// de http.sys lo dice la evidencia (HTTP), que acá se simula en una fila.
+func TestExcludedOrigen(t *testing.T) {
+	winnat := "55150–55249, 55308–55407, 55408–55507, 55508–55607, 55634–55733, 55807–55906"
+	casos := []struct {
+		file     string
+		fam      Family
+		programa string // las filas que, sin evidencia de http.sys, son de un programa
+	}{
+		{"netsh_es_ipv4_tcp_ssdp.txt", IPv4, "2869"},
+		{"netsh_es_ipv6_tcp_ssdp.txt", IPv6, "2869"},
+		{"netsh_es_ipv4_tcp_mezcla.txt", IPv4, "47111–47117, 47230, 47231, 47233"},
+		{"netsh_es_ipv6_tcp_mezcla.txt", IPv6, "47111–47117, 47230, 47231, 47233"},
+	}
+	for _, c := range casos {
+		raw, err := os.ReadFile(filepath.Join("testdata", c.file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		xs, err := ParseExcluded(string(raw), TCP, c.fam)
+		if err != nil {
+			t.Fatalf("%s: %v", c.file, err)
+		}
+		por := map[ExclusionOrigin][]string{}
+		for _, x := range xs {
+			por[x.Origin()] = append(por[x.Origin()], x.Range.String())
+		}
+		if got := strings.Join(por[OriginWinNAT], ", "); got != winnat {
+			t.Errorf("%s: WinNAT = %q, esperaba %q", c.file, got, winnat)
+		}
+		if got := strings.Join(por[OriginProgram], ", "); got != c.programa {
+			t.Errorf("%s: de un programa = %q, esperaba %q", c.file, got, c.programa)
+		}
+		if len(por[OriginHTTP])+len(por[OriginAdministered]) != 0 {
+			t.Errorf("%s: sin evidencia no hay filas de http.sys ni administradas: %v", c.file, por)
+		}
+		for _, x := range xs {
+			if x.Lo == x.Hi {
+				x.HTTP = HTTPHold{Held: true}
+				if x.Origin() != OriginHTTP {
+					t.Errorf("%s: %v con evidencia de http.sys es %v", c.file, x.Range, x.Origin())
+				}
+			}
+		}
+	}
+
+	// La forma manda sobre la evidencia: un bloque de 100 es de WinNAT aunque
+	// alguien diga que es de http.sys (que aparta de a un puerto), y una
+	// administrada es administrada aunque mida 100.
+	x := ExcludedRange{Proto: TCP, Family: IPv4, Range: Range{3000, 3099}, HTTP: HTTPHold{Held: true}}
+	if x.Origin() != OriginWinNAT {
+		t.Errorf("%+v es %v", x, x.Origin())
+	}
+	x.Administered = true
+	if x.Origin() != OriginAdministered {
+		t.Errorf("%+v es %v", x, x.Origin())
+	}
+	for _, n := range []uint16{1, 2, 99, 101, 200} {
+		y := ExcludedRange{Proto: TCP, Family: IPv4, Range: Range{3000, 3000 + n - 1}}
+		if y.Origin() != OriginProgram {
+			t.Errorf("una fila de %d sin evidencia es %v", n, y.Origin())
+		}
+	}
+}
+
 // Sintéticas: inglés, varias filas, con y sin "*", la palabra acentuada en
 // CP850 (0xA2 = ó) como la escribiría una versión vieja, y fin de línea LF.
 func TestExcludedSintetica(t *testing.T) {

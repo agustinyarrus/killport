@@ -1,0 +1,15 @@
+
+Protocolo tcp Intervalos de exclusión de puertos
+
+Puerto de inicio    Puerto final      
+----------          --------      
+      2869        2869      
+     55150       55249      
+     55308       55407      
+     55408       55507      
+     55508       55607      
+     55634       55733      
+     55807       55906      
+
+* - Exclusiones de puertos administrados.
+

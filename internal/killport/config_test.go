@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -29,6 +30,14 @@ var (
 
 func excl(c combo, lo, hi uint16, administrada bool) ports.ExcludedRange {
 	return ports.ExcludedRange{Proto: c.proto, Family: c.fam, Range: ports.R(lo, hi), Administered: administrada}
+}
+
+// exclHTTP es la fila de un puerto que aparta http.sys mientras SSDP lo
+// atiende, con lo que el adaptador sabe de ella.
+func exclHTTP(c combo, p uint16) ports.ExcludedRange {
+	x := excl(c, p, p, false)
+	x.HTTP = ports.HTTPHold{Held: true, URL: "http://*:2869/", Account: "servicio local", What: "SSDP (UPnP), el descubrimiento de dispositivos de la red"}
+	return x
 }
 
 func dinamicos(inicio uint16, cantidad int) ports.DynamicRanges {
@@ -143,6 +152,28 @@ func TestConfigReservar(t *testing.T) {
 			estado: estadoRed{Excl: ports.Exclusions{excl(tcp4, 2980, 3079, false)}},
 			pedido: pedidoConfig{Reservar: ports.Of(3000)},
 			impide: "no es de WinNAT (esta máquina no lo tiene)",
+		},
+		{
+			// El 2869 que aparta http.sys mientras SSDP lo atiende: detener
+			// WinNAT no lo libera. Antes el plan lo detenía igual.
+			nombre: "lo aparta http.sys: WinNAT no se toca y se dice qué es",
+			estado: estadoRed{Excl: ports.Exclusions{exclHTTP(tcp4, 2869), exclHTTP(tcp6, 2869), excl(tcp4, 55150, 55249, false)}, WinnatExiste: true, WinnatCorriendo: true},
+			pedido: pedidoConfig{Reservar: ports.Of(2869)},
+			impide: "2869 TCP IPv4 cae en la exclusión 2869, que Windows pone mientras http.sys atiende ese puerto (SSDP (UPnP), el descubrimiento de dispositivos de la red): no es de WinNAT",
+		},
+		{
+			nombre: "lo reservó un programa: WinNAT no se toca",
+			estado: estadoRed{Excl: ports.Exclusions{excl(tcp4, 47111, 47117, false), excl(tcp6, 47111, 47117, false)}, WinnatExiste: true, WinnatCorriendo: true},
+			pedido: pedidoConfig{Reservar: ports.Of(47113)},
+			impide: "47113 TCP IPv4 cae en la exclusión 47111–47117, que no es de WinNAT (sus bloques son de 100 puertos) ni administrada",
+		},
+		{
+			// No se hace la mitad: el 3000 lo tapa WinNAT, pero el 47113 no se
+			// puede, así que nada (ni detener WinNAT).
+			nombre: "uno de WinNAT y uno de un programa: ninguno",
+			estado: estadoRed{Excl: ports.Exclusions{excl(tcp4, 2980, 3079, false), excl(tcp4, 47111, 47117, false)}, WinnatExiste: true, WinnatCorriendo: true},
+			pedido: pedidoConfig{Reservar: ports.Of(3000, 47113)},
+			impide: "47113 TCP IPv4 cae en la exclusión 47111–47117",
 		},
 		{
 			nombre: "un UDP ocupado no impide reservar TCP",
@@ -349,7 +380,8 @@ func (r *redFalsa) detenerWinnat(_ context.Context, _ time.Time) error {
 		return err
 	}
 	r.estado.WinnatCorriendo = false
-	r.estado.Excl = slices.DeleteFunc(slices.Clone(r.estado.Excl), func(x ports.ExcludedRange) bool { return !x.Administered })
+	// Suelta SUS bloques; lo que apartan http.sys o un programa queda.
+	r.estado.Excl = slices.DeleteFunc(slices.Clone(r.estado.Excl), func(x ports.ExcludedRange) bool { return x.Origin() == ports.OriginWinNAT })
 	return nil
 }
 
@@ -568,9 +600,11 @@ func TestConfigNoEjecutaLoQueNoDebe(t *testing.T) {
 	}
 }
 
-// estadoAlAzar arma un estado cualquiera: bloques de WinNAT, exclusiones
-// administradas, puertos en uso y rangos dinámicos, todo cerca del 3000 para
-// que las cosas se crucen.
+// estadoAlAzar arma un estado cualquiera: bloques de WinNAT (de 100),
+// exclusiones de http.sys (de un puerto) y de programas (de cualquier otro
+// tamaño), exclusiones administradas, puertos en uso y rangos dinámicos, todo
+// cerca del 3000 para que las cosas se crucen. bloques son los de WinNAT: los
+// que vuelve a reservar cuando arranca.
 func estadoAlAzar(rng *rand.Rand) (estadoRed, []ports.ExcludedRange) {
 	e := estadoRed{WinnatExiste: true, WinnatCorriendo: rng.IntN(5) != 0, Ocupados: map[combo]ports.Set{}}
 	var bloques []ports.ExcludedRange
@@ -578,14 +612,21 @@ func estadoAlAzar(rng *rand.Rand) (estadoRed, []ports.ExcludedRange) {
 		tomado := ports.Of()
 		for n := rng.IntN(3); n > 0; n-- {
 			lo := uint16(2900 + rng.IntN(200))
-			r := ports.R(lo, lo+uint16(rng.IntN(60)))
-			if !ports.NewSet(r).Intersect(tomado).IsEmpty() {
+			x := ports.ExcludedRange{Proto: c.proto, Family: c.fam, Range: ports.R(lo, lo+uint16(rng.IntN(60))), Administered: rng.IntN(2) == 0}
+			switch {
+			case x.Administered:
+			case rng.IntN(2) == 0:
+				x.Range = ports.R(lo, lo+ports.WinNATBlock-1)
+			case rng.IntN(2) == 0:
+				x.Range = ports.R(lo, lo)
+				x.HTTP = ports.HTTPHold{Held: true, URL: "http://*:" + strconv.Itoa(int(lo)) + "/"}
+			}
+			if !ports.NewSet(x.Range).Intersect(tomado).IsEmpty() {
 				continue
 			}
-			tomado = tomado.Union(ports.NewSet(r))
-			x := ports.ExcludedRange{Proto: c.proto, Family: c.fam, Range: r, Administered: rng.IntN(2) == 0}
+			tomado = tomado.Union(ports.NewSet(x.Range))
 			e.Excl = append(e.Excl, x)
-			if !x.Administered {
+			if x.Origin() == ports.OriginWinNAT {
 				bloques = append(bloques, x)
 			}
 		}
@@ -641,7 +682,8 @@ func TestConfigPropiedades(t *testing.T) {
 			t.Fatalf("impedimentos y pasos a la vez\n%s", ctxt)
 		}
 		// 2. WinNAT: o no se lo toca, o se lo detiene PRIMERO y se lo arranca
-		//    ÚLTIMO; y se lo toca solo si un bloque suyo tapa algo que se reserva.
+		//    ÚLTIMO; y se lo toca solo si un bloque SUYO tapa algo que se
+		//    reserva (lo que apartan http.sys o un programa no cuenta).
 		stop, start, tapa := 0, 0, false
 		for i, p := range plan.Pasos {
 			switch p.Clase {
@@ -657,7 +699,7 @@ func TestConfigPropiedades(t *testing.T) {
 				}
 			case pasoExcluir:
 				for _, b := range bloquesDe(estado.Excl, p.Combo) {
-					tapa = tapa || seCruzan(b, p.Rango)
+					tapa = tapa || (b.Origin() == ports.OriginWinNAT && seCruzan(b.Range, p.Rango))
 				}
 			}
 		}
@@ -666,6 +708,17 @@ func TestConfigPropiedades(t *testing.T) {
 		}
 		if stop == 1 && (!estado.WinnatCorriendo || !strings.Contains(strings.Join(plan.Avisos, " "), "WinNAT")) {
 			t.Fatalf("detiene WinNAT sin que corra o sin avisar\n%s", ctxt)
+		}
+		//    Lo que tapa una exclusión que no es de WinNAT no se reserva:
+		//    impedimento, que dice que no es de WinNAT.
+		for _, c := range enCombos(pedido.protocolos(ports.TCP)) {
+			faltan := pedido.Reservar.Minus(administradas(estado.Excl, c))
+			for _, b := range bloquesDe(estado.Excl, c) {
+				if b.Origin() != ports.OriginWinNAT && !ports.NewSet(b.Range).Intersect(faltan).IsEmpty() &&
+					!strings.Contains(strings.Join(plan.Impedimentos, " "), "cae en la exclusión "+b.Range.String()) {
+					t.Fatalf("reserva lo que tapa %v (%v) sin decir que no es de WinNAT\n%s", b.Range, b.Origin(), ctxt)
+				}
+			}
 		}
 		// 3. Cada paso toca SOLO lo que el usuario nombró, en los protocolos
 		//    que pidió, y tiene la forma cerrada de siempre.

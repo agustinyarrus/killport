@@ -97,7 +97,9 @@
 // puerto: libre; fantasma (hijos que heredaron el socket, se ofrecen como nueva
 // ronda); lo retomó otro proceso (respawn, con el supervisor por LCA cruzado);
 // o, si nadie lo tiene, se diagnostica con los rangos excluidos y un sondeo de
-// bind si lo reserva Windows (WSAEACCES). El intermediario de un externo que
+// bind si lo reserva Windows (WSAEACCES), diciendo de quién es la exclusión:
+// solo un bloque de WinNAT recibe las salidas de WinNAT (reservarlo,
+// reiniciarlo); lo que aparta http.sys o un programa se dice por lo que es. El intermediario de un externo que
 // se detuvo cuenta como muerto reciente SOLO en los puertos de ese externo: se
 // espera a que los suelte, sin esperar los que nunca va a soltar. En un plan
 // enfocado, los sockets de lo que no se pidió no cuentan (el puerto queda
@@ -113,7 +115,7 @@
 // después de arrancar) y --any. WaitPorts es el bucle: relee la tabla liviana
 // con backoff y, esperando que se libere, duerme sobre los handles de los
 // dueños (una salida despierta al instante). Diagnoser.Blocked corta rápido lo
-// que WinNAT tapa.
+// que tapa una exclusión de Windows.
 //
 // # Quién es quién
 //

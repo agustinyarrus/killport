@@ -69,15 +69,15 @@ func estadoWinnat() (existe, corriendo bool, err error) {
 // memoizado: decide sobre lo que hay AHORA).
 func leerEstadoRed(ctx context.Context, sys *sistema) (estadoRed, error) {
 	sys.red.olvidar()
-	l := sys.red.leer()
-	if l.errExcl != nil {
-		return estadoRed{}, errors.New("no pude leer los rangos excluidos: " + l.errExcl.Error())
+	excl, err := sys.exclusiones()
+	if err != nil {
+		return estadoRed{}, errors.New("no pude leer los rangos excluidos: " + err.Error())
 	}
 	socks, err := sys.Sockets(ctx)
 	if err != nil {
 		return estadoRed{}, errors.New("no pude leer las tablas de red: " + err.Error())
 	}
-	e := estadoRed{Excl: l.excl, Dyn: l.dyn, Ocupados: ocupadosDe(socks)}
+	e := estadoRed{Excl: excl, Dyn: sys.red.leer().dyn, Ocupados: ocupadosDe(socks)}
 	if e.WinnatExiste, e.WinnatCorriendo, err = sys.estadoWinnat(); err != nil {
 		return estadoRed{}, errors.New("no pude consultar el estado de WinNAT: " + err.Error())
 	}
@@ -443,10 +443,15 @@ func hoyConfig(e estadoRed, ped pedidoConfig) []string {
 				if x.Proto != c.proto || x.Family != c.fam || ports.NewSet(x.Range).Intersect(pedidos).IsEmpty() {
 					continue
 				}
-				if x.Administered {
+				switch x.Origin() {
+				case ports.OriginAdministered:
 					partes = append(partes, "reservado (exclusión administrada "+x.Range.String()+")")
-				} else {
+				case ports.OriginWinNAT:
 					partes = append(partes, "tapado por el bloque "+x.Range.String()+" de WinNAT")
+				case ports.OriginHTTP:
+					partes = append(partes, "apartado por http.sys mientras lo atiende (exclusión "+x.Range.String()+")")
+				default:
+					partes = append(partes, "reservado por un programa (exclusión "+x.Range.String()+")")
 				}
 			}
 			if uso := pedidos.Intersect(e.Ocupados[c]); !uso.IsEmpty() {

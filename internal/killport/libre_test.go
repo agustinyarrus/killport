@@ -77,7 +77,7 @@ func TestTextoSalteo(t *testing.T) {
 			"lo escucha el PID 9"},
 		{ports.Skip{Why: ports.SkipTaken, Socket: ports.Socket{Proto: ports.TCP, Local: ap("10.0.0.2:3000"), State: ports.Established, PID: 812}},
 			"lo usa node.exe (PID 812 · shop-web) en una conexión (conectado)"},
-		{ports.Skip{Why: ports.SkipWinNAT, Excluded: ports.ExcludedRange{Range: ports.Range{Lo: 2980, Hi: 3079}}},
+		{ports.Skip{Why: ports.SkipReserved, Excluded: ports.ExcludedRange{Range: ports.Range{Lo: 2980, Hi: 3079}}},
 			"lo reservó WinNAT para Hyper-V, WSL o Docker (bloque 2980–3079)"},
 		{ports.Skip{Why: ports.SkipAdministered, Excluded: ports.ExcludedRange{Range: ports.Range{Lo: 50000, Hi: 50059}, Administered: true}},
 			"exclusión administrada 50000–50059: alguien lo apartó a mano; se puede usar, pero no lo ofrezco"},

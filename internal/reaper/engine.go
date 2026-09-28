@@ -1196,7 +1196,7 @@ func (d *Diagnoser) one(p uint16, proto ports.Proto, fam ports.Family) PortResul
 	case ports.BindForbidden:
 		switch {
 		case excluded && !excl.Administered:
-			return d.winnat(p, proto, fam, excl)
+			return d.reserved(p, proto, fam, excl)
 		case excluded:
 			return PortResult{Port: p, Status: PortReserved, Proto: proto, Reserved: excl,
 				Reason: "cae en la exclusión administrada " + excl.Range.String() + " y aun así Windows niega el bind: es la reserva de otro programa, o alguien lo tiene tomado sin figurar en las tablas",
@@ -1223,12 +1223,61 @@ func (d *Diagnoser) one(p uint16, proto ports.Proto, fam ports.Family) PortResul
 	// Sin sondeo (o el sondeo no pudo decir nada): queda la tabla.
 	switch {
 	case excluded && !excl.Administered:
-		return d.winnat(p, proto, fam, excl)
+		return d.reserved(p, proto, fam, excl)
 	case excluded:
 		free.Reserved = excl
 		free.Reason = "cae en la exclusión administrada " + excl.Range.String() + ": Windows no lo reparte solo (no sondeé si se puede usar)"
 	}
 	return free
+}
+
+// reserved arma el veredicto de un puerto que cae en una exclusión sin "*",
+// según de quién es (ports.ExcludedRange.Origin). Solo un bloque de WinNAT
+// lleva las salidas de WinNAT: reservar el puerto (que detiene WinNAT) o
+// reiniciarlo no le hacen nada a lo que apartó http.sys o un programa, y
+// ofrecerlo sería cortarles la red a WSL, Docker y Hyper-V para nada.
+func (d *Diagnoser) reserved(p uint16, proto ports.Proto, fam ports.Family, excl ports.ExcludedRange) PortResult {
+	switch excl.Origin() {
+	case ports.OriginWinNAT:
+		return d.winnat(p, proto, fam, excl)
+	case ports.OriginHTTP:
+		return httpReserved(p, proto, excl)
+	}
+	return programReserved(p, proto, excl)
+}
+
+// httpReserved es el puerto que atiende http.sys: Windows lo aparta mientras
+// lo atiende y lo suelta solo. No hay nada que reservar ni que reiniciar.
+func httpReserved(p uint16, proto ports.Proto, excl ports.ExcludedRange) PortResult {
+	h := excl.HTTP
+	reason := "cae en la exclusión " + excl.Range.String() + ", que Windows pone mientras http.sys atiende ese puerto"
+	if h.What != "" {
+		reason += ": es " + h.What
+	}
+	var detail []string
+	if h.URL != "" {
+		detail = append(detail, h.URL)
+	}
+	switch {
+	case h.Service != "":
+		detail = append(detail, "servicio "+h.Service)
+	case h.Account != "":
+		detail = append(detail, "reservada a "+h.Account)
+	}
+	if len(detail) > 0 {
+		reason += " (" + strings.Join(detail, ", ") + ")"
+	}
+	return PortResult{Port: p, Status: PortReserved, Proto: proto, Reserved: excl, Reason: reason,
+		Advice: "no es de WinNAT: ni reservarlo ni reiniciar WinNAT la sacan. Windows la quita sola cuando http.sys deja de atender el puerto; sin tocar nada, usá otro"}
+}
+
+// programReserved es la reserva que pidió un programa mientras corre: ni de
+// WinNAT (no es un bloque de 100) ni de un administrador (no tiene "*"), y
+// Windows no dice de quién es.
+func programReserved(p uint16, proto ports.Proto, excl ports.ExcludedRange) PortResult {
+	return PortResult{Port: p, Status: PortReserved, Proto: proto, Reserved: excl,
+		Reason: "cae en la exclusión " + excl.Range.String() + ", que no es de WinNAT (sus bloques son de 100 puertos) ni la agregó un administrador: la tiene reservada un programa mientras corre, y Windows no dice cuál",
+		Advice: "no hay proceso a la vista que cerrar: la reserva se va cuando ese programa la suelta o termina; ni reservarlo ni reiniciar WinNAT la sacan"}
 }
 
 // winnat arma el veredicto de un puerto que cae en un bloque de WinNAT, con

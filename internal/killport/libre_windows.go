@@ -47,6 +47,12 @@ func correrLibre(t *tui.Term, sys *sistema, pos []string, o opciones) int {
 	}
 	quien := nuevoNombrador(ctx, sys)
 	code := codigoLibre(q, res)
+	if o.json || t.Interactive() {
+		// Lo que se cuenta de lo salteado dice de quién es cada exclusión.
+		if xs, err := sys.exclusiones(); err == nil {
+			res.Skips = conOrigen(res.Skips, xs)
+		}
+	}
 
 	switch {
 	case o.json:
@@ -298,8 +304,8 @@ type jsonLibre struct {
 	Tope        bool           `json:"tope,omitempty"` // se dejó de buscar: el sondeo falló demasiadas veces
 }
 
-// jsonSalteado es un tramo salteado. motivo: tomado | winnat | administrada |
-// dinamico | sondeo.
+// jsonSalteado es un tramo salteado. motivo: tomado | winnat | httpsys |
+// programa | administrada | dinamico | sondeo.
 type jsonSalteado struct {
 	Inicio   uint16        `json:"inicio"`
 	Fin      uint16        `json:"fin"`
@@ -307,7 +313,7 @@ type jsonSalteado struct {
 	PID      uint32        `json:"pid,omitempty"`     // tomado
 	Proceso  string        `json:"proceso,omitempty"` // tomado
 	Estado   string        `json:"estado,omitempty"`  // tomado en TCP: listen | established | time_wait | …
-	Rango    *jsonRango    `json:"rango,omitempty"`   // winnat, administrada: la fila entera
+	Rango    *jsonRango    `json:"rango,omitempty"`   // winnat, httpsys, programa, administrada: la fila entera
 	Dinamico *jsonDinamico `json:"dinamico,omitempty"`
 	Proto    string        `json:"proto,omitempty"`   // tomado, sondeo
 	Familia  string        `json:"familia,omitempty"` // sondeo
@@ -331,12 +337,9 @@ func libreJSON(q ports.FreeQuery, r ports.FreeResult, imagen func(uint32) string
 			if s.Socket.Proto == ports.TCP {
 				js.Estado = strings.ToLower(s.Socket.State.String())
 			}
-		case ports.SkipWinNAT, ports.SkipAdministered:
-			js.Motivo = "winnat"
-			if s.Why == ports.SkipAdministered {
-				js.Motivo = "administrada"
-			}
-			js.Rango = &jsonRango{Inicio: s.Excluded.Lo, Fin: s.Excluded.Hi, Administrada: s.Excluded.Administered}
+		case ports.SkipReserved, ports.SkipAdministered:
+			js.Motivo = origenJSON(s.Excluded)
+			js.Rango = rangoJSON(s.Excluded)
 		case ports.SkipDynamic:
 			d := s.Dynamic
 			js.Motivo = "dinamico"

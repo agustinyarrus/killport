@@ -299,11 +299,21 @@ type jsonPuerto struct {
 
 // jsonRango es un rango de puertos excluido. administrada: es una exclusión
 // que puso alguien a mano (la fila con "*"): Windows no reparte esos puertos,
-// pero un programa que los pide los puede usar.
+// pero un programa que los pide los puede usar. origen: de quién es
+// (administrada | winnat | httpsys | programa); url y servicio, lo que se
+// sabe de http.sys en ese puerto.
 type jsonRango struct {
 	Inicio       uint16 `json:"inicio"`
 	Fin          uint16 `json:"fin"`
 	Administrada bool   `json:"administrada"`
+	Origen       string `json:"origen"`
+	URL          string `json:"url,omitempty"`
+	Servicio     string `json:"servicio,omitempty"`
+}
+
+// rangoJSON es la fila de una exclusión para el JSON.
+func rangoJSON(x ports.ExcludedRange) *jsonRango {
+	return &jsonRango{Inicio: x.Lo, Fin: x.Hi, Administrada: x.Administered, Origen: origenJSON(x), URL: x.HTTP.URL, Servicio: x.HTTP.Service}
 }
 
 // jsonDinamico es el rango de puertos que Windows reparte solo.
@@ -571,7 +581,7 @@ func construirJSONReporte(rep reaper.Report, plan reaper.Plan, soloListado bool)
 			jp.Proto = p.Proto.String()
 		}
 		if p.Reserved != (ports.ExcludedRange{}) {
-			jp.Reservado = &jsonRango{Inicio: p.Reserved.Lo, Fin: p.Reserved.Hi, Administrada: p.Reserved.Administered}
+			jp.Reservado = rangoJSON(p.Reserved)
 		}
 		if d := p.Dynamic; d != (ports.DynamicRange{}) {
 			jp.Dinamico = &jsonDinamico{Proto: d.Proto.String(), Familia: d.Family.String(), Inicio: d.Start, Cantidad: d.Count, DeFabrica: d.Default()}

@@ -35,6 +35,15 @@ func TestConocidos(t *testing.T) {
 		{"MongoDB", "mongod.exe", ports.Of(27017), "MongoDB"},
 		{"Apache2.4", "httpd.exe", ports.Of(80), "Apache"},
 		{"jenkins", "jenkins.exe", ports.Of(8080), "Jenkins"},
+		// Los de Windows que atienden por http.sys: dicen qué son y que lo que
+		// no rompe nada es usar otro puerto.
+		{"SSDPSRV", "svchost.exe", ports.Of(2869), "SSDP (UPnP), el descubrimiento de dispositivos de la red"},
+		{"upnphost", "", ports.Of(2869), "sin romper nada, usá otro puerto"},
+		{"FDResPub", "svchost.exe", ports.Of(5357), "WSD"},
+		{"fdPHost", "", ports.Of(5358), "detección de redes"},
+		{"WinRM", "", ports.Of(47001), "WinRM"},
+		{"WMPNetworkSvc", "", ports.Of(10243), "Reproductor de Windows Media"},
+		{"SSDPSRV", "svchost.exe", ports.Of(1900), ""}, // el SSDP de UDP no se explica con la tabla
 		// Conocido por OTRO puerto: en este es un programa cualquiera.
 		{"VMwareHostd", "vmware-hostd.exe", ports.Of(8443), ""},
 		{"", "httpd.exe", ports.Of(9000), ""},
@@ -54,6 +63,34 @@ func TestConocidos(t *testing.T) {
 		}
 		if ok && !strings.Contains(s.texto(), c.dice) {
 			t.Errorf("conocido(%q, %q, %v) dice %q, esperaba que nombre %q", c.servicio, c.imagen, c.puertos, s.texto(), c.dice)
+		}
+	}
+}
+
+// Para qué es un puerto que atiende http.sys: por el servicio, o por el
+// puerto solo cuando no se sabe el servicio. Solo los de Windows.
+func TestUsoDeWindows(t *testing.T) {
+	casos := []struct {
+		servicio string
+		puerto   uint16
+		dice     string // "" = no se sabe
+	}{
+		{"", 2869, "SSDP (UPnP)"},
+		{"SSDPSRV", 2869, "SSDP (UPnP)"},
+		{"ssdpsrv", 2869, "SSDP (UPnP)"},
+		{"", 5357, "WSD"},
+		{"", 5358, "WSD"},
+		{"", 5985, "WinRM"},
+		{"Wecsvc", 5985, ""}, // otro servicio en ese puerto: no se adivina
+		{"MiServicio", 2869, ""},
+		{"", 80, ""},      // IIS está en la tabla, pero no es un servicio de Windows que aparte el puerto
+		{"W3SVC", 80, ""}, // ídem
+		{"", 3000, ""},
+	}
+	for _, c := range casos {
+		s, ok := usoDeWindows(c.servicio, c.puerto)
+		if ok != (c.dice != "") || (ok && !strings.Contains(s.que, c.dice)) {
+			t.Errorf("usoDeWindows(%q, %d) = %q, %v; esperaba %q", c.servicio, c.puerto, s.que, ok, c.dice)
 		}
 	}
 }

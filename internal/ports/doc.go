@@ -24,19 +24,24 @@
 //     (TIME_WAIT y compañía), que se informan pero no tienen dueño.
 //   - ParseExcluded: la tabla de rangos excluidos de netsh, leída sin
 //     entender el idioma: se ancla en la línea de guiones y toma las filas
-//     "entero entero [*]".
+//     "entero entero [*]". Origin dice de quién es cada fila: administrada
+//     ("*"), de WinNAT (un bloque de 100), de http.sys (un puerto que atiende,
+//     con la prueba en HTTPHold) o de un programa.
+//   - ParseURLReservations: las reservas de URL de http.sys (`netsh http show
+//     urlacl`), con las cuentas sacadas del SDDL, que no se traduce.
 //   - ParseSS y ParseProcNet: lo que escucha dentro de una distro de WSL,
 //     desde `ss -Hltnup` (con los procesos dueños) o desde las tablas crudas
 //     /proc/net/tcp{,6} y udp{,6} (con el inodo, para unirlo a /proc/*/fd).
 //   - ParseRequestQueues: las colas de http.sys (`netsh http show
 //     servicestate view=requestq`), independiente del idioma: qué proceso
-//     registró cada URL (el que está detrás de System en el 80).
+//     registró cada URL (el que está detrás de System en el 80), también las
+//     atadas a una IP (HTTP://127.0.0.1:8080:127.0.0.1/).
 //   - ProxyRule y ParseProxyRule: las reglas de `netsh interface portproxy`
 //     leídas del registro, con el comando exacto que borra cada una.
 //   - DynamicRange y ParseDynamic: el rango de puertos que Windows reparte
 //     solo (`netsh int ipvX show dynamicport`), y si está corrido de fábrica.
 //   - BindResult y FindFree: el puerto libre de verdad (--free): fuera de lo
-//     tomado, de los bloques de WinNAT, de las exclusiones administradas y
-//     del rango dinámico, confirmado con un sondeo de bind exclusivo, con el
+//     tomado, de lo que reserva Windows (WinNAT, http.sys, un programa), de
+//     las exclusiones administradas y del rango dinámico, confirmado con un sondeo de bind exclusivo, con el
 //     porqué de cada tramo salteado.
 package ports

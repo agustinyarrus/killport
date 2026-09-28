@@ -313,9 +313,10 @@ func (s *sistema) Services() (map[uint32][]reaper.Service, error) {
 }
 
 // Excluded y DynamicRanges salen de una misma lectura de netsh (ver red.go).
+// Las exclusiones van con lo que se sabe de http.sys en las que pueden ser
+// suyas (exclusiones_windows.go): el diagnóstico dice de quién es cada una.
 func (s *sistema) Excluded() (ports.Exclusions, error) {
-	l := s.red.leer()
-	return l.excl, l.errExcl
+	return s.exclusiones()
 }
 
 func (s *sistema) DynamicRanges() (ports.DynamicRanges, error) {

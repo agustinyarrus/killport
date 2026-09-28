@@ -4,8 +4,10 @@ package killport
 
 // red.go: lo que netsh sabe de la red de Windows y killport necesita para
 // explicar un puerto que nadie tiene: los RANGOS EXCLUIDOS (los bloques que
-// WinNAT aparta para Hyper-V, WSL y Docker, y las exclusiones administradas) y
-// el RANGO DINÁMICO de cada protocolo y familia.
+// WinNAT aparta para Hyper-V, WSL y Docker, los puertos que aparta http.sys
+// mientras los atiende, las reservas de los programas y las exclusiones
+// administradas; de quién es cada una lo dice exclusiones.go) y el RANGO
+// DINÁMICO de cada protocolo y familia.
 //
 // Son ocho consultas (dos tablas × dos protocolos × dos familias) y netsh
 // tarda unos 200 ms en arrancar. Van TODAS A LA VEZ: son independientes, así
@@ -59,6 +61,10 @@ type lecturaRed struct {
 	errExcl error
 	dyn     ports.DynamicRanges
 	errDyn  error
+	// atribuidas son excl con lo que se sabe de http.sys (ver
+	// sistema.exclusiones): se arman una vez, la primera vez que hacen falta.
+	atribucion sync.Once
+	atribuidas ports.Exclusions
 }
 
 // red es el lector de una corrida.

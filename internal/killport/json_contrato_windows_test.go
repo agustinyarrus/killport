@@ -16,7 +16,7 @@ import (
 // "desde" es siempre una hora, y un rango de puertos va en "inicio"/"fin".
 func TestJSONClavesConUnSoloSentido(t *testing.T) {
 	q := ports.FreeQuery{Within: ports.Range{Lo: 8123, Hi: 65535}, Protos: []ports.Proto{ports.TCP}, Count: 1}
-	r := ports.FreeResult{Found: []uint16{8124}, Skips: []ports.Skip{{Range: ports.Range{Lo: 8123, Hi: 8123}, Why: ports.SkipWinNAT,
+	r := ports.FreeResult{Found: []uint16{8124}, Skips: []ports.Skip{{Range: ports.Range{Lo: 8123, Hi: 8123}, Why: ports.SkipReserved,
 		Excluded: ports.ExcludedRange{Range: ports.Range{Lo: 8100, Hi: 8199}}}}}
 	b, _ := json.Marshal(libreJSON(q, r, nil))
 	libre := string(b)

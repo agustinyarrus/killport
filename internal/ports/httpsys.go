@@ -95,6 +95,18 @@ func (q RequestQueue) On(port uint16) []QueueURL {
 	return out
 }
 
+// Owners son los procesos que MANDAN en una cola: el que la creó, si netsh lo
+// informó, y si no los que la atienden. La diferencia importa en IIS: los
+// w3wp.exe atienden, pero la cola y sus URL son del servicio WAS, que relanza
+// a un w3wp apenas muere. Cerrar al que atiende no libera el puerto; el dueño
+// es quien registró.
+func (q RequestQueue) Owners() []QueueProcess {
+	if q.Controller.PID != 0 {
+		return []QueueProcess{q.Controller}
+	}
+	return q.Processes
+}
+
 // ParseRequestQueues interpreta la vista de colas de netsh. Una vista sin
 // colas (nadie registró nada) es una lista vacía, sin error. Sin la línea de
 // guiones, error: eso no es la vista (netsh falló, o la salida es otra cosa),

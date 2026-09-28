@@ -194,7 +194,7 @@ func TestLineasSalteos(t *testing.T) {
 		skips = append(skips, ports.Skip{Range: ports.Range{Lo: uint16(3000 + 2*i), Hi: uint16(3000 + 2*i)}, Why: ports.SkipTaken,
 			Socket: ports.Socket{Proto: ports.TCP, State: ports.Listen, PID: 812}})
 	}
-	skips[1] = ports.Skip{Range: ports.Range{Lo: 3002, Hi: 3079}, Why: ports.SkipWinNAT, Excluded: ports.ExcludedRange{Range: ports.Range{Lo: 2980, Hi: 3079}}}
+	skips[1] = ports.Skip{Range: ports.Range{Lo: 3002, Hi: 3079}, Why: ports.SkipReserved, Excluded: ports.ExcludedRange{Range: ports.Range{Lo: 2980, Hi: 3079}}}
 	texto := strings.Join(lineasSalteos(term, skips, func(uint32) string { return "node.exe (PID 812)" }, 8), "\n")
 	for _, want := range []string{"salteé", "3000        lo escucha node.exe (PID 812)", "3002–3079   lo reservó WinNAT", "y 3 tramos más"} {
 		if !strings.Contains(texto, want) {

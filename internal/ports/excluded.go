@@ -8,11 +8,22 @@ import (
 )
 
 // Rangos excluidos: puertos que Windows le niega a cualquier programa (bind
-// falla con WSAEACCES, 10013) sin que haya un proceso dueño. Los reserva WinNAT
-// para Hyper-V, WSL y Docker (dinámicos, cambian en cada arranque) o un
-// administrador con "netsh int ipvX add excludedportrange" (persistentes,
-// marcados con "*"). Es la causa típica de "el puerto está ocupado pero netstat
-// no muestra a nadie".
+// falla con WSAEACCES, 10013). Es la causa típica de "el puerto está ocupado
+// pero netstat no muestra a nadie". La tabla no dice quién puso cada fila,
+// solo si la agregó un administrador ("*", persistente); el resto se reconoce
+// por su FORMA, y hay tres clases (ver Origin):
+//
+//   - los bloques de WinNAT, para Hyper-V, WSL y Docker: siempre de 100
+//     puertos, sin alinear, elegidos de nuevo en cada arranque;
+//   - el puerto que atiende http.sys: una fila de UN puerto, en TCP v4 y v6,
+//     que aparece cuando http.sys empieza a atenderlo y se va cuando lo suelta
+//     (el 2869 de SSDP y el 5357 de WSD, que van y vienen con esos servicios);
+//   - la reserva que pidió un programa en ejecución (SIO_ACQUIRE_PORT_RESERVATION,
+//     no pide administrador): del tamaño que pidió, hasta que la suelta o
+//     termina. Windows no dice cuál.
+//
+// Para distinguir la segunda de la tercera hace falta mirar a http.sys; eso lo
+// hace quien lee el sistema y lo deja en HTTP (ver HTTPHold).
 //
 // La fuente es la salida de
 //
@@ -34,6 +45,56 @@ type ExcludedRange struct {
 	// Administered: fila con "*", agregada a mano y persistente. Reiniciar
 	// WinNAT no la libera; hay que borrarla con netsh.
 	Administered bool
+	// HTTP: lo que se sabe de http.sys en el puerto de la fila, si es suya.
+	// ParseExcluded lo deja vacío; lo completa quien leyó http.sys.
+	HTTP HTTPHold
+}
+
+// WinNATBlock es el tamaño de los bloques que aparta WinNAT: 100 puertos
+// seguidos, siempre, y en cualquier lugar (sin alinear: 55150, 55308 y 55408
+// en una misma máquina). El tamaño es su firma.
+const WinNATBlock = 100
+
+// HTTPHold es la prueba de que una exclusión es de http.sys: http.sys aparta
+// cada puerto TCP que atiende (una fila de un solo puerto, en IPv4 y en IPv6,
+// aunque la URL esté atada a 127.0.0.1) mientras lo atiende. Todos los campos
+// son texto, así que ExcludedRange se sigue pudiendo comparar con ==.
+type HTTPHold struct {
+	Held bool // hay pruebas: una URL en ese puerto, o el kernel escuchándolo
+	// URL es una URL de http.sys en ese puerto: la registrada, si hay una a
+	// la vista, o si no la reservada (netsh http show urlacl). "" si lo único
+	// que se vio fue al kernel escuchando.
+	URL     string
+	Service string // el servicio que la atiende, o al que está reservada, si se supo
+	Account string // la cuenta a la que está reservada, si no es un servicio ("servicio local")
+	What    string // qué es, si es algo conocido de Windows ("SSDP (UPnP), …")
+}
+
+// ExclusionOrigin es de dónde sale una exclusión.
+type ExclusionOrigin uint8
+
+const (
+	// OriginProgram: la pidió un programa en ejecución y Windows no dice
+	// cuál. Es lo que queda cuando no es ninguna de las otras.
+	OriginProgram      ExclusionOrigin = iota
+	OriginAdministered                 // "*": la agregó un administrador (o killport --reserve)
+	OriginWinNAT                       // un bloque de WinNAT: Hyper-V, WSL o Docker
+	OriginHTTP                         // el puerto que atiende http.sys
+)
+
+// Origin dice de dónde sale la fila: administrada si tiene "*"; de WinNAT si
+// es un bloque de exactamente WinNATBlock puertos; de http.sys si hay pruebas
+// (HTTP.Held); y si no, de un programa.
+func (x ExcludedRange) Origin() ExclusionOrigin {
+	switch {
+	case x.Administered:
+		return OriginAdministered
+	case x.Len() == WinNATBlock:
+		return OriginWinNAT
+	case x.HTTP.Held:
+		return OriginHTTP
+	}
+	return OriginProgram
 }
 
 // Exclusions es la tabla completa (los cuatro protocolo×familia juntos).

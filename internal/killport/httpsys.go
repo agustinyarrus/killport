@@ -75,18 +75,6 @@ func (h *httpsys) enPuerto(port uint16) []ports.RequestQueue {
 	return out
 }
 
-// duenos son los procesos que MANDAN en una cola: el que la creó, si netsh lo
-// informó, y si no los que la atienden. La diferencia importa en IIS: los
-// w3wp.exe atienden, pero la cola y sus URL son del servicio WAS, que relanza
-// a un w3wp apenas muere. Cerrar al que atiende no libera el puerto; el dueño
-// es quien registró.
-func duenos(q ports.RequestQueue) []ports.QueueProcess {
-	if q.Controller.PID != 0 {
-		return []ports.QueueProcess{q.Controller}
-	}
-	return q.Processes
-}
-
 // identidades resuelve los procesos de unas colas a identidades de la
 // instantánea. Entre la foto y la respuesta de netsh un proceso pudo morir y
 // su PID reciclarse: si netsh informó la imagen y no es la del proceso de la
@@ -95,7 +83,7 @@ func identidades(colas []ports.RequestQueue, forest *reaper.Forest) []reaper.ID 
 	var out []reaper.ID
 	seen := map[reaper.ID]bool{}
 	for _, q := range colas {
-		for _, qp := range duenos(q) {
+		for _, qp := range q.Owners() {
 			p, ok := forest.LivePID(qp.PID)
 			if !ok || seen[p.ID] {
 				continue
@@ -191,7 +179,7 @@ func (h *httpsys) urlsDe(pid uint32, puertos ports.Set) []string {
 	seen := map[string]bool{}
 	for _, q := range h.colas {
 		suya := false
-		for _, p := range duenos(q) {
+		for _, p := range q.Owners() {
 			suya = suya || p.PID == pid
 		}
 		if !suya {

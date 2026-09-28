@@ -609,11 +609,12 @@ func (o *ownerWaits) close() {
 
 // --- Falla rápida ------------------------------------------------------------
 
-// Blocked dice si p NO VA A PODER ESCUCHAR mientras WinNAT no cambie sus
-// bloques: en cada protocolo que pide el filtro, las dos familias caen en un
-// bloque de WinNAT (excluido sin "*") y el bind exclusivo no lo ata (o no se
-// sondeó). Esperar que un servidor escuche ahí es esperar en vano, así que la
-// espera corta enseguida. Un puerto que se deja atar en alguna combinación, o
+// Blocked dice si p NO VA A PODER ESCUCHAR mientras Windows no suelte la
+// exclusión que lo tapa: en cada protocolo que pide el filtro, las dos
+// familias caen en una exclusión sin "*" (un bloque de WinNAT, el puerto que
+// atiende http.sys, la reserva de un programa) y el bind exclusivo no lo ata
+// (o no se sondeó). Esperar que un servidor escuche ahí es esperar en vano,
+// así que la espera corta enseguida y dice de quién es. Un puerto que se deja atar en alguna combinación, o
 // que solo tapa una exclusión administrada (que un programa sí puede usar),
 // no está bloqueado: el sondeo exclusivo que falla sin exclusión de por medio
 // es ambiguo (un socket atado que todavía no escucha) y tampoco cuenta.

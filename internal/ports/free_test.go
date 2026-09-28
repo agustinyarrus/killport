@@ -253,7 +253,7 @@ func textoSkip(s Skip) string {
 	switch s.Why {
 	case SkipTaken:
 		return fmt.Sprintf("%s tomado:%d", rango, s.Socket.PID)
-	case SkipWinNAT:
+	case SkipReserved:
 		return fmt.Sprintf("%s winnat:%d-%d", rango, s.Excluded.Lo, s.Excluded.Hi)
 	case SkipAdministered:
 		return fmt.Sprintf("%s administrada:%d-%d", rango, s.Excluded.Lo, s.Excluded.Hi)
@@ -366,7 +366,7 @@ func findFreeIngenuo(q FreeQuery, w FreeWorld, probe Prober) resultadoIngenuo {
 					if admin {
 						return SkipAdministered
 					}
-					return SkipWinNAT
+					return SkipReserved
 				}
 			}
 		}

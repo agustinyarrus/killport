@@ -102,8 +102,8 @@ func textoSalteo(s ports.Skip, quien func(pid uint32) string) string {
 			return "lo escucha " + nombre(x.PID)
 		}
 		return "lo usa " + nombre(x.PID) + " en una conexión (" + x.State.Label() + ")"
-	case ports.SkipWinNAT:
-		return "lo reservó WinNAT para Hyper-V, WSL o Docker (bloque " + s.Excluded.Range.String() + ")"
+	case ports.SkipReserved:
+		return textoReserva(s.Excluded)
 	case ports.SkipAdministered:
 		return "exclusión administrada " + s.Excluded.Range.String() + ": alguien lo apartó a mano; se puede usar, pero no lo ofrezco"
 	case ports.SkipDynamic:

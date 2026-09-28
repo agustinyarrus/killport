@@ -165,6 +165,67 @@ func TestDiagBloqueDeWinNATEnUDP(t *testing.T) {
 	}
 }
 
+// Una exclusión sin "*" que NO es un bloque de WinNAT —el puerto que atiende
+// http.sys, la reserva de un programa— se dice por lo que es, y no lleva
+// ninguna salida de WinNAT: ni reservarlo (que detiene WinNAT) ni reiniciarlo
+// la sacan, y cortarles la red a WSL y Docker para nada no es una salida.
+// Antes toda exclusión sin "*" era "el bloque que WinNAT reservó": con el
+// 2869 de SSDP y con una reserva de un programa se aconsejaba --reserve.
+func TestDiagExclusionQueNoEsDeWinNAT(t *testing.T) {
+	ssdp := ports.HTTPHold{Held: true, URL: "http://*:2869/", Account: "servicio local", What: "SSDP (UPnP), el descubrimiento de dispositivos de la red"}
+	casos := []struct {
+		nombre     string
+		fila       ports.ExcludedRange
+		puerto     uint16
+		dice, pide []string
+	}{
+		{"http.sys con lo que se sabe", ports.ExcludedRange{Range: ports.Range{Lo: 2869, Hi: 2869}, HTTP: ssdp}, 2869,
+			[]string{"cae en la exclusión 2869, que Windows pone mientras http.sys atiende ese puerto: es SSDP (UPnP), el descubrimiento de dispositivos de la red (http://*:2869/, reservada a servicio local)"},
+			[]string{"no es de WinNAT", "Windows la quita sola"}},
+		{"http.sys con su servicio", ports.ExcludedRange{Range: ports.Range{Lo: 5985, Hi: 5985},
+			HTTP: ports.HTTPHold{Held: true, URL: "http://+:5985/wsman/", Service: "WinRM", What: "la administración remota de Windows (WinRM)"}}, 5985,
+			[]string{"(http://+:5985/wsman/, servicio WinRM)"}, []string{"no es de WinNAT"}},
+		{"http.sys sin más detalle", ports.ExcludedRange{Range: ports.Range{Lo: 47230, Hi: 47230}, HTTP: ports.HTTPHold{Held: true}}, 47230,
+			[]string{"cae en la exclusión 47230, que Windows pone mientras http.sys atiende ese puerto"}, []string{"no es de WinNAT"}},
+		{"un programa", ports.ExcludedRange{Range: ports.Range{Lo: 47111, Hi: 47117}}, 47113,
+			[]string{"cae en la exclusión 47111–47117, que no es de WinNAT (sus bloques son de 100 puertos) ni la agregó un administrador", "Windows no dice cuál"},
+			[]string{"no hay proceso a la vista", "ese programa la suelta o termina"}},
+		{"un programa, de un puerto", ports.ExcludedRange{Range: ports.Range{Lo: 3000, Hi: 3000}}, 3000,
+			[]string{"cae en la exclusión 3000, que no es de WinNAT"}, []string{"ni reiniciar WinNAT la sacan"}},
+	}
+	for _, c := range casos {
+		for _, probe := range []bool{true, false} {
+			s := newSim(epoch)
+			for _, fam := range []ports.Family{ports.IPv4, ports.IPv6} {
+				x := c.fila
+				x.Proto, x.Family = ports.TCP, fam
+				s.excluded = append(s.excluded, x)
+			}
+			s.dynamic = dynamic(1025, 3976) // corrido: a WinNAT se lo culparía; acá no
+			s.binds[c.puerto] = ports.BindForbidden
+			procs, _ := s.Snapshot(ctx)
+			got := NewDiagnoser(s, ports.Filter{}, probe).Seen(nil, NewForest(procs)).Port(c.puerto)
+			if got.Status != PortReserved || got.Proto != ports.TCP || got.Reserved.Range != c.fila.Range || got.Reserved.Administered {
+				t.Fatalf("%s (sondeo %v): %+v", c.nombre, probe, got)
+			}
+			for _, d := range c.dice {
+				if !strings.Contains(got.Reason, d) {
+					t.Errorf("%s (sondeo %v): el motivo no dice %q:\n  %s", c.nombre, probe, d, got.Reason)
+				}
+			}
+			for _, d := range c.pide {
+				if !strings.Contains(got.Advice, d) {
+					t.Errorf("%s (sondeo %v): el consejo no dice %q:\n  %s", c.nombre, probe, d, got.Advice)
+				}
+			}
+			if len(got.Remedies) != 0 || got.Dynamic != (ports.DynamicRange{}) || strings.Contains(got.Reason, "reservó para Hyper-V") ||
+				strings.Contains(got.Reason+got.Advice, "net stop") || strings.Contains(got.Reason+got.Advice, "--reserve") {
+				t.Errorf("%s (sondeo %v): le da salidas de WinNAT a lo que no es de WinNAT: %+v", c.nombre, probe, got)
+			}
+		}
+	}
+}
+
 // La tabla de exclusiones y el sondeo se leen en instantes distintos: si el
 // bind anda, el puerto está libre aunque la tabla diga que WinNAT lo tiene.
 func TestDiagElSondeoLeGanaALaTabla(t *testing.T) {
