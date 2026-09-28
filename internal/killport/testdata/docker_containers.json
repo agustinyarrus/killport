@@ -1,0 +1,51 @@
+[
+  {
+    "Id": "8dfafdbc3a40c8f0f8e24c5a3a2d7c4e1b9e3f6a1c2d3e4f5a6b7c8d9e0f1a2b",
+    "Names": ["/shop-db-1"],
+    "Image": "postgres:16",
+    "ImageID": "sha256:b781f3a53e61df916e97056c5ea65c0e81ebb1fc62bd8d1b0cfd4f9a1b2c3d4e",
+    "Command": "docker-entrypoint.sh postgres",
+    "Created": 1727400000,
+    "Ports": [
+      {"IP": "0.0.0.0", "PrivatePort": 5432, "PublicPort": 5432, "Type": "tcp"},
+      {"IP": "::", "PrivatePort": 5432, "PublicPort": 5432, "Type": "tcp"}
+    ],
+    "Labels": {
+      "com.docker.compose.config-hash": "4c2e8f",
+      "com.docker.compose.project": "shop",
+      "com.docker.compose.service": "db",
+      "com.docker.compose.version": "2.29.1"
+    },
+    "State": "running",
+    "Status": "Up 3 hours",
+    "HostConfig": {"NetworkMode": "shop_default"},
+    "NetworkSettings": {"Networks": {"shop_default": {"IPAddress": "172.18.0.2"}}},
+    "Mounts": []
+  },
+  {
+    "Id": "1f2e3d4c5b6a79880f1e2d3c4b5a69788796a5b4c3d2e1f00112233445566778",
+    "Names": ["/web"],
+    "Image": "nginx:1.27",
+    "Command": "/docker-entrypoint.sh nginx -g 'daemon off;'",
+    "Created": 1727401000,
+    "Ports": [
+      {"PrivatePort": 9000, "Type": "tcp"},
+      {"IP": "0.0.0.0", "PrivatePort": 80, "PublicPort": 8080, "Type": "tcp"},
+      {"IP": "0.0.0.0", "PrivatePort": 443, "PublicPort": 8443, "Type": "tcp"},
+      {"IP": "0.0.0.0", "PrivatePort": 5353, "PublicPort": 5353, "Type": "udp"},
+      {"IP": "0.0.0.0", "PrivatePort": 7000, "PublicPort": 7000, "Type": "sctp"}
+    ],
+    "Labels": {},
+    "State": "running",
+    "Status": "Up 2 minutes"
+  },
+  {
+    "Id": "aa11bb22cc33dd44ee55ff6600778899aabbccddeeff00112233445566778899",
+    "Names": ["/viejo"],
+    "Image": "redis:7",
+    "Ports": [],
+    "Labels": null,
+    "State": "exited",
+    "Status": "Exited (0) 2 days ago"
+  }
+]

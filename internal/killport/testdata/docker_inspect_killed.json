@@ -1,0 +1,5 @@
+{
+  "Id": "8dfafdbc3a40c8f0f8e24c5a3a2d7c4e1b9e3f6a1c2d3e4f5a6b7c8d9e0f1a2b",
+  "State": {"Status": "exited", "Running": false, "OOMKilled": false, "ExitCode": 137},
+  "HostConfig": {"RestartPolicy": {"Name": "no", "MaximumRetryCount": 0}}
+}

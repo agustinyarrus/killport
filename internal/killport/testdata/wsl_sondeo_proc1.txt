@@ -1,0 +1,22 @@
+@navaja 1
+@proc
+@net tcp
+  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   0: 00000000:0BB8 00000000:0000 0A 00000000:00000000 00:00000000 00000000  1000        0 34567 1 0000000000000000 100 0 0 10 0
+   1: 0100007F:1F40 0100007F:D2F0 01 00000000:00000000 00:00000000 00000000  1000        0 34601 1 0000000000000000 20 4 30 10 -1
+@net tcp6
+  sl  local_address                         remote_address                        st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   0: 00000000000000000000000000000000:0BB8 00000000000000000000000000000000:0000 0A 00000000:00000000 00:00000000 00000000  1000        0 34568 1 0000000000000000 100 0 0 10 0
+@net udp
+  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
+@net udp6
+@fd
+/proc/1/fd:
+lrwx------    1 root     root            64 Sep 27 10:00 5 -> socket:[9000]
+/proc/812/fd:
+lrwx------    1 agus     agus            64 Sep 27 10:00 20 -> socket:[34567]
+lrwx------    1 agus     agus            64 Sep 27 10:00 21 -> socket:[34568]
+/proc/813/fd:
+lrwx------    1 agus     agus            64 Sep 27 10:00 7 -> socket:[34601]
+@clock 1790400000 100
+@fin

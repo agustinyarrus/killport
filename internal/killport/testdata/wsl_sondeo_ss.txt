@@ -1,0 +1,37 @@
+wsl: Se detectó una configuración de proxy de localhost, pero no se refleja en WSL.
+@navaja 1
+@ss
+tcp   LISTEN 0      511          0.0.0.0:3000       0.0.0.0:*    users:(("node",pid=812,fd=20))
+tcp   LISTEN 0      511             [::]:3000          [::]:*    users:(("node",pid=812,fd=21))
+tcp   LISTEN 0      4096   127.0.0.53%lo:53         0.0.0.0:*    users:(("systemd-resolve",pid=172,fd=15))
+tcp   LISTEN 0      5            0.0.0.0:8000       0.0.0.0:*    users:(("python3",pid=950,fd=3))
+tcp   LISTEN 0      4096         0.0.0.0:8080       0.0.0.0:*    users:(("docker-proxy",pid=2100,fd=4))
+tcp   LISTEN 0      511    172.25.160.10:9229       0.0.0.0:*    users:(("node",pid=1300,fd=19))
+tcp   LISTEN 0      128          0.0.0.0:4000       0.0.0.0:*    users:(("(raro) x",pid=1400,fd=3))
+tcp   LISTEN 0      128          0.0.0.0:6000       0.0.0.0:*
+@clock 1790400000 100
+@pid 172
+S 172 (systemd-resolve) S 1 172 172 0 -1 4194560 1234 0 0 0 10 5 0 0 20 0 1 0 250 25096192 3180 18446744073709551615 1 1 0 0 0 0 0 4096 18947 0 0 0 17 3 0 0 0 0 0 0 0 0 0 0 0 0 0
+U 991 systemd-resolve
+C /lib/systemd/systemd-resolved 
+@pid 812
+S 812 (node) S 790 812 790 34817 812 4194560 20000 0 0 0 150 30 0 0 20 0 11 0 523400 1234567890 25000 18446744073709551615 1 1 0 0 0 0 0 16781312 134235650 0 0 0 17 5 0 0 0 0 0 0 0 0 0 0 0 0 0
+U 1000 agus
+C node server.js --port 3000 
+@pid 950
+S 950 (python3) S 1 950 950 0 -1 4194560 800 0 0 0 5 2 0 0 20 0 1 0 610000 30000000 4000 18446744073709551615 1 1 0 0 0 0 0 0 0 0 0 0 17 1 0 0 0 0 0 0 0 0 0 0 0 0 0
+U 0 root
+C python3 -m http.server 8000 
+@pid 2100
+S 2100 (docker-proxy) S 1 2100 2100 0 -1 4194560 900 0 0 0 3 1 0 0 20 0 7 0 700000 1500000000 3000 18446744073709551615 1 1 0 0 0 0 0 0 0 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0
+U 0 root
+C /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 8080 -container-ip 172.17.0.2 -container-port 80 
+@pid 1300
+S 1300 (node) S 1 1300 1300 0 -1 4194560 900 0 0 0 3 1 0 0 20 0 7 0 710000 1500000000 3000 18446744073709551615 1 1 0 0 0 0 0 0 0 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0
+U 1000 agus
+C node --inspect=172.25.160.10:9229 app.js 
+@pid 1400
+S 1400 ((raro) x) S 1 1400 1400 0 -1 4194560 900 0 0 0 3 1 0 0 20 0 1 0 720000 1500000000 3000 18446744073709551615 1 1 0 0 0 0 0 0 0 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0
+U 1000 agus
+C ./raro 
+@fin

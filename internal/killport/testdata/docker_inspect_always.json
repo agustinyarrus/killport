@@ -1,0 +1,7 @@
+{
+  "Id": "8dfafdbc3a40c8f0f8e24c5a3a2d7c4e1b9e3f6a1c2d3e4f5a6b7c8d9e0f1a2b",
+  "Name": "/shop-db-1",
+  "State": {"Status": "running", "Running": true, "Paused": false, "Restarting": false, "OOMKilled": false, "Dead": false, "Pid": 2311, "ExitCode": 0, "Error": "", "StartedAt": "2026-09-27T08:12:01.123456789Z", "FinishedAt": "0001-01-01T00:00:00Z"},
+  "HostConfig": {"RestartPolicy": {"Name": "always", "MaximumRetryCount": 0}, "PortBindings": {"5432/tcp": [{"HostIp": "", "HostPort": "5432"}]}},
+  "Config": {"Image": "postgres:16", "StopSignal": "SIGINT"}
+}
