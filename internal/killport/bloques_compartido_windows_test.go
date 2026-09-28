@@ -4,6 +4,7 @@ package killport
 
 import (
 	"encoding/json"
+	"os/user"
 	"strings"
 	"testing"
 	"time"
@@ -116,5 +117,18 @@ func TestBloquesDondeProyectoYCompartido(t *testing.T) {
 	if len(doc.Objetivos) != 1 || doc.Objetivos[0].PID != 812 || strings.Join(doc.Objetivos[0].Direcciones, ",") != "::1" || doc.Objetivos[0].Alcance != "esta_pc" ||
 		len(doc.AlMargen) != 1 || doc.AlMargen[0].PID != 990 || len(doc.Compartidos) != 1 || doc.Compartidos[0].Puerto != 5173 {
 		t.Errorf("JSON = %s", b)
+	}
+}
+
+// usuarioPropio lee la cuenta del token de killport, y es la misma que da una
+// fuente independiente (os/user). Si no coincidieran, la línea "usuario:"
+// volvería a salir en el bloque de cada proceso propio.
+func TestUsuarioPropio(t *testing.T) {
+	yo, err := user.Current()
+	if err != nil {
+		t.Skipf("os/user no sabe quién soy: %v", err)
+	}
+	if u := usuarioPropio(); u == "" || !strings.EqualFold(u, yo.Username) {
+		t.Fatalf("usuarioPropio() = %q, os/user dice %q", u, yo.Username)
 	}
 }

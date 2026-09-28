@@ -13,6 +13,7 @@ package killport
 import (
 	"errors"
 	"net/netip"
+	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -650,7 +651,7 @@ func bloqueObjetivo(t *tui.Term, sys *sistema, forest *reaper.Forest, tg reaper.
 		if comando != "" {
 			out = append(out, lineasComando(t, comando, unaLinea(d.CommandLine))...)
 		}
-		if d.User != "" {
+		if d.User != "" && !strings.EqualFold(d.User, usuarioPropio()) {
 			linea(tui.Faint, "usuario: "+d.User)
 		}
 	}
@@ -734,6 +735,20 @@ func bloqueObjetivo(t *tui.Term, sys *sistema, forest *reaper.Forest, tg reaper.
 	}
 	return out
 }
+
+// usuarioPropio es la cuenta con la que corre killport ("EQUIPO\usuario"),
+// leída una vez de su propio token; "" si no se pudo. En el bloque de un
+// objetivo, la línea "usuario:" sale solo si el dueño es OTRO (un servicio,
+// otra cuenta): que un proceso tuyo es tuyo no dice nada, y repetía el
+// nombre del equipo y el de la cuenta en cada bloque (en una captura para
+// compartir, en un issue).
+var usuarioPropio = sync.OnceValue(func() string {
+	d, err := win.QueryDetailWith(uint32(os.Getpid()), time.Time{}, nil)
+	if err != nil {
+		return ""
+	}
+	return d.User
+})
 
 // lineasComando son los renglones de la línea de comandos en el bloque de un
 // objetivo: es lo que identifica al proceso antes de contestar "¿Cerrar?", así

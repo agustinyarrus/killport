@@ -252,6 +252,9 @@ func TestE2EProyectoYHuerfano(t *testing.T) {
 	if !strings.Contains(out, "proyecto: tienda › web (package.json «e2e-kp», rama e2e)") || !strings.Contains(out, " v"+version.Version) {
 		t.Fatalf("bloque sin el proyecto o sin la versión:\n%s", out)
 	}
+	if strings.Contains(out, "usuario:") {
+		t.Fatalf("un proceso propio no lleva la línea usuario: (sale solo si es de otra cuenta):\n%s", out)
+	}
 
 	// Un huérfano: el padre lo lanza desprendido y termina.
 	marca := filepath.Join(t.TempDir(), "hijo.marca")
