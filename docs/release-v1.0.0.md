@@ -43,7 +43,7 @@ Para comprobar la descarga, en la carpeta donde quedaron los dos archivos:
 (Get-FileHash .\killport.exe -Algorithm SHA256).Hash -eq ((Get-Content .\SHA256SUMS) -split '\s+')[0]   # True
 ```
 
-En Git Bash o WSL, `sha256sum -c SHA256SUMS`. El `.exe` es reproducible: el mismo commit con el mismo Go da los mismos bytes, así que cualquiera puede compilar la etiqueta y comparar ([cómo](https://github.com/agustinyarrus/killport/blob/v1.0.0/docs/RELEASE.md#4-el-exe-es-reproducible)).
+En Git Bash o WSL, `sha256sum -c SHA256SUMS`. El `.exe` es reproducible: la misma etiqueta con el mismo Go da los mismos bytes, así que cualquiera puede compilarla y comparar ([cómo](https://github.com/agustinyarrus/killport/blob/v1.0.0/docs/RELEASE.md#5-el-exe-es-reproducible)).
 
 ## Cómo se verificó
 

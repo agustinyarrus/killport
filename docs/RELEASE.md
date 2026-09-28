@@ -6,7 +6,7 @@ El `.exe` se describe solo, y eso es lo que se revisa antes de publicarlo:
 
 ```powershell
 .\dist\killport.exe --version        # killport 1.0.0+abc1234: la versión y el commit, sin "-mod"
-go version -m .\dist\killport.exe    # el Go que lo compiló, vcs.revision (el commit entero), vcs.modified=false
+go version -m .\dist\killport.exe    # el Go que lo compiló, "mod … v1.0.0", vcs.revision y vcs.modified=false
 ```
 
 ## 1. Antes de etiquetar
@@ -17,20 +17,30 @@ go version -m .\dist\killport.exe    # el Go que lo compiló, vcs.revision (el c
 - La CI está en verde para el commit que se va a etiquetar ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)).
 - Go: el más nuevo que haya. El `go.mod` pide 1.26.0 como mínimo (y la CI compila con esa, para probar que alcanza), pero la release se compila con la última versión estable, que trae los arreglos de seguridad de la biblioteca estándar. Cuál fue queda escrito en las notas y en el propio `.exe`.
 
-## 2. Compilar
+## 2. Etiquetar, antes de compilar
 
 En un clon limpio de `main`, al día:
 
 ```powershell
 git switch main
 git pull --ff-only
-git status --porcelain     # tiene que salir vacío: con cambios, el commit estampado lleva "-mod"
-.\build.ps1 -Test          # go vet y todas las pruebas; después, dist\killport.exe
+git status --porcelain                    # tiene que salir vacío
+git tag -a v1.0.0 -m "killport 1.0.0"     # todavía sin subirla
 ```
 
-`build.ps1` compila Go puro (`CGO_ENABLED=0`) para `windows/amd64`, sin símbolos de depuración (`-s -w`) y sin rutas de la máquina (`-trimpath`), y estampa con `-ldflags -X` la versión de `internal/version` y el commit (siempre 7 caracteres: el largo automático de git crece con el repo y cambiaría los bytes). Al final muestra el tamaño y el SHA256.
+La etiqueta va antes de compilar porque Go estampa en el `.exe` la versión del módulo que deduce de las etiquetas: con `v1.0.0` en el commit, `go version -m` dice `mod … v1.0.0`; sin ella, una pseudo-versión (`v0.0.0-<fecha>-<commit>`). Son bytes distintos, y quien baje la etiqueta para reproducir el `.exe` la va a tener. Si algo sale mal antes de subirla, `git tag -d v1.0.0` y de nuevo.
 
-## 3. SHA256SUMS
+## 3. Compilar
+
+```powershell
+.\build.ps1 -Test          # go vet y todas las pruebas; después, dist\killport.exe
+.\dist\killport.exe --version
+go version -m .\dist\killport.exe
+```
+
+`build.ps1` compila Go puro (`CGO_ENABLED=0`) para `windows/amd64`, sin símbolos de depuración (`-s -w`) y sin rutas de la máquina (`-trimpath`), y estampa con `-ldflags -X` la versión de `internal/version` y el commit (siempre 7 caracteres: el largo automático de git crece con el repo y cambiaría los bytes). Al final muestra el tamaño y el SHA256. Con cambios sin commitear, el commit estampado lleva `-mod` y `go version -m` dice `vcs.modified=true`: eso no se publica.
+
+## 4. SHA256SUMS
 
 ```powershell
 $h = (Get-FileHash -Algorithm SHA256 .\dist\killport.exe).Hash.ToLowerInvariant()
@@ -48,9 +58,9 @@ Es el formato de `sha256sum` (el hash en minúsculas, dos espacios, el nombre, u
 sha256sum -c SHA256SUMS    # Git Bash, WSL o Linux: "killport.exe: OK"
 ```
 
-## 4. El .exe es reproducible
+## 5. El .exe es reproducible
 
-El mismo commit compilado con la misma versión de Go da el mismo `.exe`, byte a byte, en cualquier máquina y en cualquier carpeta: `-trimpath` saca las rutas, `build.ps1` fija sistema, arquitectura, flags y el largo del commit, y killport no tiene dependencias externas. Se comprobó el 28/09/2026 compilando el mismo commit desde dos clones en carpetas distintas: SHA256 idéntico.
+La misma etiqueta compilada con la misma versión de Go da el mismo `.exe`, byte a byte, en cualquier máquina y en cualquier carpeta: `-trimpath` saca las rutas, `build.ps1` fija sistema, arquitectura, flags y el largo del commit, y killport no tiene dependencias externas. Se comprobó el 28/09/2026: el mismo commit desde dos clones en carpetas distintas dio el mismo SHA256, y un tercer clon con otra caché de compilación dio, con Go 1.26.0, el mismo hash que el `.exe` de una corrida de la CI simulada en la PC. Lo único que cambia los bytes, además del Go y del commit, es lo que Go deduce de las etiquetas (el paso 2): el mismo commit, recién etiquetado, dio otro hash.
 
 Eso permite comprobar que el `.exe` publicado sale de la etiqueta, sin confiar en quien lo compiló:
 
@@ -63,10 +73,9 @@ $env:GOTOOLCHAIN = 'go1.27.1'    # la versión que dicen las notas; Go la baja s
 Get-FileHash .\dist\killport.exe  # el mismo hash que SHA256SUMS
 ```
 
-## 5. Etiquetar y publicar
+## 6. Publicar
 
 ```powershell
-git tag -a v1.0.0 -m "killport 1.0.0"
 git push origin v1.0.0
 ```
 
@@ -88,7 +97,7 @@ gh release create v1.0.0 dist\killport.exe dist\SHA256SUMS --verify-tag --draft 
 gh release edit v1.0.0 --draft=false
 ```
 
-## 6. Después
+## 7. Después
 
 Bajar lo publicado, como lo bajaría cualquiera, y comprobarlo:
 
@@ -105,4 +114,4 @@ Una etiqueta publicada no se mueve. Si algo salió mal, la corrección es otra v
 
 ## Los .exe de la CI
 
-Cada corrida de la CI guarda como artefacto (14 días) el `killport.exe` de ese commit con su `SHA256SUMS`. Sirven para probar un commit sin compilarlo, no para publicar: la CI compila con el Go mínimo del `go.mod`, y la release con el más nuevo.
+Cada corrida de la CI guarda como artefacto (14 días) el `killport.exe` de ese commit con su `SHA256SUMS`. Sirven para probar un commit sin compilarlo, no para publicar: la CI compila con el Go mínimo del `go.mod`, y la release con el más nuevo. También se reproducen, con dos cuidados: Go 1.26.0 (`$env:GOTOOLCHAIN = 'go1.26.0'`) y un clon sin etiquetas, como el de la CI (`git clone --no-tags`), para que Go deduzca la misma pseudo-versión.
