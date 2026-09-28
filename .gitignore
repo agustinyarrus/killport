@@ -10,3 +10,6 @@
 *.swp
 Thumbs.db
 desktop.ini
+
+# La escena de la demo (demo/preparar.ps1): se arma y se borra en cada grabación
+/demo/.escena/

@@ -1,0 +1,11 @@
+{
+  "name": "tienda",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Tienda de juguete para la demo de killport: tres servidores de desarrollo que escuchan de verdad.",
+  "scripts": {
+    "web": "node web.js",
+    "dev": "node dev.js",
+    "api": "python api.py"
+  }
+}
