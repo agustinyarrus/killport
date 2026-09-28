@@ -131,6 +131,7 @@ Todo lo que el algoritmo necesita del sistema pasa por una interfaz. En producci
   - la función de dibujo corre sin el candado del terminal (puede tomar el del estado de la herramienta);
   - `Println` nunca llama a la función de dibujo: reusa el último cuadro.
 - **Recorte seguro**: `ClipANSI` recorta una línea con escapes a N columnas visibles sin romper los colores. Las líneas vivas se cortan una columna antes del borde, para que el terminal no las parta y el conteo de líneas no se desfase.
+- **Renglones que no entran**: los errores (`✗`) se parten en palabras al ancho de la ventana, con las líneas de más alineadas después de la marca (`Term.Marked`); a un pipe van enteros. Antes la consola los cortaba donde caía el borde (`killport 3000 --wsl`, a 100 columnas, dejaba "ree" / "nvío lo tiene").
 - **Barra**: resolución de 1/8 de columna (bloques `▏▎▍▌▋▊▉█`) con degradé.
 - **Tarjeta**: fondo apenas teñido, sin bordes, en columnas que se leen de arriba hacia abajo. Sin color (`NO_COLOR`, `--no-color`, un pipe), una versión en texto plano.
 - **Formato es-AR**: miles con punto, decimales con coma, bytes en unidades decimales (las que usan los servicios para sus límites), tiempos humanos ("hace 5 min 16 s", "<1 ms").

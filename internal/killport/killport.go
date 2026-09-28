@@ -373,7 +373,7 @@ func holding(socks []ports.Socket, filter ports.Filter, requested ports.Set) []p
 // fallo imprime un error y devuelve el código de "no se pudo".
 func fallo(t *tui.Term, err error) int {
 	t.Blank()
-	t.Line(t.Paint(tui.Rose, "✗ ") + t.Paint(tui.Text, err.Error()))
+	t.Lines(t.Marked("✗ ", tui.Rose, err.Error()))
 	t.Blank()
 	return cli.ExitFailure
 }
@@ -381,7 +381,7 @@ func fallo(t *tui.Term, err error) int {
 // falloUsage imprime un error de línea de comandos y devuelve el código 2.
 func falloUsage(t *tui.Term, err error) int {
 	t.Blank()
-	t.Line(t.Paint(tui.Rose, "✗ ") + t.Paint(tui.Text, err.Error()))
+	t.Lines(t.Marked("✗ ", tui.Rose, err.Error()))
 	t.Line(t.Paint(tui.Faint, "› killport --help muestra todas las opciones"))
 	t.Blank()
 	return cli.ExitUsage

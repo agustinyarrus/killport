@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -195,5 +196,46 @@ func TestAyudaEntraEnElAncho(t *testing.T) {
 		if strings.Count(texto, "descripción") != 12 {
 			t.Errorf("ancho %d: se perdió texto de la descripción", w)
 		}
+	}
+}
+
+// Un error de uso que no entra en la ventana se parte en palabras (Term.Marked).
+// Antes iba en un renglón de 116 columnas y, a 100, la consola lo cortaba donde
+// caía: el final de la lista quedaba solo en el renglón de abajo.
+func TestErrorDeUsoSeParteEnPalabras(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), "salida-*.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	stdout := os.Stdout
+	os.Stdout = f
+	term := tui.Open()
+	os.Stdout = stdout
+	defer term.Close()
+	term.SetWidth(100)
+
+	a := New("x", "1.0", "prueba de errores largos")
+	var s string
+	a.Enum(&s, "servicio", 0, "a dónde", "discord", "whatsapp", "outlook", "gmail", "telegram")
+	if _, done, code := a.Start(term, []string{"--servicio", "discrod"}); !done || code != ExitUsage {
+		t.Fatalf("Start: done=%v código=%d", done, code)
+	}
+	b, err := os.ReadFile(f.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var palabras []string
+	for _, l := range strings.Split(strings.TrimRight(string(b), "\n"), "\n") {
+		if w := tui.Width(l); w > 100-len(tui.Margin) {
+			t.Errorf("renglón de %d columnas: %q", w, l)
+		}
+		if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, "›") {
+			palabras = append(palabras, strings.Fields(strings.TrimPrefix(l, "✗ "))...)
+		}
+	}
+	want := `--servicio: "discrod" no es una opción; ¿quisiste decir "discord"? (discord, whatsapp, outlook, gmail, telegram)`
+	if got := strings.Join(palabras, " "); got != want {
+		t.Errorf("el error cambió al partirse:\n%q\n%q", got, want)
 	}
 }

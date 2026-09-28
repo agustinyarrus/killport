@@ -9,7 +9,7 @@ go test ./...
 .\build.ps1 -Test     # go vet + go test, y después compila
 ```
 
-611 tests: `killport` 253, `reaper` 166, `win` 96, `ports` 49, `tui` 24, `cli` 11, `win/pipeio` 9, `textdist` 2 y `win/desk` 1. No piden administrador, no cambian la configuración de la máquina y no necesitan Docker ni WSL (lo que depende de ellos se saltea solo, diciendo por qué). Las pruebas de punta a punta compilan el `killport.exe` de verdad (con la etiqueta `killport_e2e`, que solo permite cambiar qué `wsl.exe` corre) y los servidores de prueba de `internal/killport/testdata/e2e`.
+613 tests: `killport` 253, `reaper` 166, `win` 96, `ports` 49, `tui` 25, `cli` 12, `win/pipeio` 9, `textdist` 2 y `win/desk` 1. No piden administrador, no cambian la configuración de la máquina y no necesitan Docker ni WSL (lo que depende de ellos se saltea solo, diciendo por qué). Las pruebas de punta a punta compilan el `killport.exe` de verdad (con la etiqueta `killport_e2e`, que solo permite cambiar qué `wsl.exe` corre) y los servidores de prueba de `internal/killport/testdata/e2e`.
 
 ## En la CI
 
@@ -88,7 +88,7 @@ Cada etapa terminó con un script que cambia una línea del código a propósito
 
 ## Regresión final
 
-Con el `killport.exe` de `dist` de ese día (la 1.1.0 de la suite de la que salió killport; el código es el de esta 1.0.0 salvo los nombres internos y dos cambios posteriores de presentación, cada uno con su prueba: la línea "usuario:" solo cuando el dueño es otra cuenta, y el supervisor que se cierra en la segunda ronda contado una sola vez, la última lección), los guiones de punta a punta de cada etapa contra la máquina real. Los de las etapas viven en la carpeta de trabajo, fuera del repo, porque dependen de esta PC (rutas fijas, los procesos del usuario que tienen que seguir vivos); los de Docker y WSL están en el repo.
+Con el `killport.exe` de `dist` de ese día (la 1.1.0 de la suite de la que salió killport), los guiones de punta a punta de cada etapa contra la máquina real. El código de esta 1.0.0 es ese salvo los nombres internos y seis cambios posteriores, cada uno con su prueba: cuatro de presentación (la línea "usuario:" solo cuando el dueño es otra cuenta; el supervisor que se cierra en la segunda ronda contado una sola vez, la última lección; el pie del listado y los errores largos partidos en palabras al ancho de la consola) y dos de diagnóstico (las URL de http.sys atadas a una IP y de quién es cada exclusión de puertos, las dos primeras lecciones). Los de las etapas viven en la carpeta de trabajo, fuera del repo, porque dependen de esta PC (rutas fijas, los procesos del usuario que tienen que seguir vivos); los de Docker y WSL están en el repo.
 
 | Guion | Qué cubre | Resultado |
 |---|---|---|

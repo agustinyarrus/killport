@@ -123,6 +123,24 @@ func (t *Term) Hint(s string) string {
 	return Margin + t.Paint(Faint, "› "+s)
 }
 
+// Marked es un renglón con una marca adelante ("✗ ", "! "), partido en
+// palabras al ancho de la ventana: las líneas de más quedan alineadas después
+// de la marca y la consola no corta nada en mitad de una palabra. A un pipe o
+// a un archivo sin ancho va entero, en un renglón. Devuelve las líneas con el
+// margen puesto.
+func (t *Term) Marked(mark string, c Color, text string) []string {
+	indent := Margin + strings.Repeat(" ", Width(mark))
+	parts := []string{text}
+	if t.Bounded() {
+		parts = Wrap(text, t.Width()-Width(indent)-len(Margin))
+	}
+	out := []string{Margin + t.Paint(c, mark) + t.Paint(Text, parts[0])}
+	for _, p := range parts[1:] {
+		out = append(out, indent+t.Paint(Text, p))
+	}
+	return out
+}
+
 // KV es un par etiqueta/valor para los bloques informativos.
 type KV struct {
 	Key, Value string

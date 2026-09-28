@@ -31,7 +31,7 @@ func (a *App) Start(t *tui.Term, args []string) (pos []string, done bool, code i
 		return nil, true, ExitOK
 	case err != nil:
 		t.Blank()
-		t.Line(t.Paint(tui.Rose, "✗ ") + t.Paint(tui.Text, err.Error()))
+		t.Lines(t.Marked("✗ ", tui.Rose, err.Error()))
 		t.Line(t.Paint(tui.Faint, "› "+a.Name+" --help muestra todas las opciones"))
 		t.Blank()
 		return nil, true, ExitUsage
