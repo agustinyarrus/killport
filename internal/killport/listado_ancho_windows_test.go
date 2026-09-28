@@ -13,8 +13,9 @@ import (
 	"github.com/agustinyarrus/killport/internal/tui"
 )
 
-// filasDeMuestra son filas como las de una máquina de desarrollo real (las
-// de esta), con un puerto compartido.
+// filasDeMuestra son filas con la forma de las de una máquina de desarrollo
+// de verdad (nombres largos, un servicio, un modelo local), con un puerto
+// compartido. Los nombres son de ejemplo.
 func filasDeMuestra() []fila {
 	now := time.Now()
 	s := func(pid uint32, dir string, port uint16) ports.Socket {
