@@ -103,11 +103,53 @@ func esperarLibre(port int) bool {
 	return false
 }
 
+// registrarHTTP lanza httpfalso y espera su "PUERTO n". Si http.sys no le
+// deja registrar la URL, el fixture dice "ERROR código" y sale: eso es de la
+// máquina (el servicio HTTP deshabilitado, una política que no deja a un
+// usuario común registrar localhost), no de killport, que todavía no corrió.
+// La prueba se saltea y dice por qué; cualquier otra cosa sigue siendo falla.
+func registrarHTTP(t *testing.T, dir string, args ...string) (*proceso, string) {
+	t.Helper()
+	srv := lanzar(t, nil, filepath.Join(dir, "httpfalso.exe"), args...)
+	leer := func(l string) (string, bool) {
+		t.Helper()
+		if v, ok := strings.CutPrefix(l, "PUERTO "); ok {
+			return strings.TrimSpace(v), true
+		}
+		if v, ok := strings.CutPrefix(l, "ERROR "); ok {
+			t.Skipf("http.sys no dejó registrar la URL de prueba (código %s): en esta máquina no se puede probar lo que hay detrás de System", strings.TrimSpace(v))
+		}
+		return "", false
+	}
+	deadline := time.After(15 * time.Second)
+	for {
+		select {
+		case l := <-srv.lineas:
+			if v, ok := leer(l); ok {
+				return srv, v
+			}
+		case <-srv.salio:
+			for { // salió: lo que alcanzó a decir antes
+				select {
+				case l := <-srv.lineas:
+					if v, ok := leer(l); ok {
+						return srv, v
+					}
+				default:
+					t.Fatal("httpfalso terminó sin decir su puerto")
+				}
+			}
+		case <-deadline:
+			t.Fatal("httpfalso no dijo su puerto")
+		}
+	}
+}
+
 // Función 3, http.sys: el puerto figura a nombre de System y es de otro.
 func TestE2EHTTPSys(t *testing.T) {
 	dir := binariosE2E(t)
-	srv := lanzar(t, nil, filepath.Join(dir, "httpfalso.exe"), "-camino", "killport-e2e")
-	port, _ := strconv.Atoi(srv.esperarLinea(t, "PUERTO "))
+	srv, puerto := registrarHTTP(t, dir, "-camino", "killport-e2e")
+	port, _ := strconv.Atoi(puerto)
 	P := strconv.Itoa(port)
 	pid := srv.cmd.Process.Pid
 	url := "http://localhost:" + P + "/KILLPORT-E2E/" // http.sys guarda el camino en mayúsculas
@@ -184,11 +226,10 @@ func TestE2EHTTPSys(t *testing.T) {
 // queda libre recién cuando se fueron los dos.
 func TestE2EHTTPSysCompartido(t *testing.T) {
 	dir := binariosE2E(t)
-	a := lanzar(t, nil, filepath.Join(dir, "httpfalso.exe"), "-camino", "kp-a")
-	P := a.esperarLinea(t, "PUERTO ")
+	a, P := registrarHTTP(t, dir, "-camino", "kp-a")
 	port, _ := strconv.Atoi(P)
-	b := lanzar(t, nil, filepath.Join(dir, "httpfalso.exe"), "-camino", "kp-b", "-puerto", P)
-	if got := b.esperarLinea(t, "PUERTO "); got != P {
+	b, got := registrarHTTP(t, dir, "-camino", "kp-b", "-puerto", P)
+	if got != P {
 		t.Fatalf("el segundo fixture tomó el %s, no el %s", got, P)
 	}
 
@@ -390,8 +431,8 @@ func TestE2EHijoElevado(t *testing.T) {
 	})
 
 	t.Run("detrás de http.sys", func(t *testing.T) {
-		srv := lanzar(t, nil, filepath.Join(dir, "httpfalso.exe"), "-camino", "killport-hijo")
-		port, _ := strconv.Atoi(srv.esperarLinea(t, "PUERTO "))
+		srv, puerto := registrarHTTP(t, dir, "-camino", "killport-hijo")
+		port, _ := strconv.Atoi(puerto)
 		id := identidadReal(t, srv.cmd.Process.Pid)
 		// El trabajo nombra al kernel (que es quien figura en la tabla): nada.
 		informe := rutaResultado(t)

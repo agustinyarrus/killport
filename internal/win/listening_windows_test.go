@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"syscall"
 	"testing"
 	"time"
@@ -100,19 +101,31 @@ func TestListeningSocketsContraLaTablaCompleta(t *testing.T) {
 
 // Cuánto cuesta cada lectura en ESTA máquina: es el número que justifica
 // releer la tabla liviana cada 25–200 ms mientras se espera un puerto.
+//
+// El costo es la MEDIANA de 5 tandas de 8 lecturas (el de cada tanda, su
+// promedio). Tandas y no lecturas sueltas: el reloj monotónico de Go en
+// Windows avanza de a ticks del sistema (entre 0,5 y 15,6 ms), así que una
+// lectura suelta de medio milisegundo mide 0 o un tick entero. La mediana y
+// no el promedio de todo: en una máquina cargada, una tanda desalojada por el
+// planificador infla el promedio sin que leer cueste más.
 func TestListeningSocketsCosto(t *testing.T) {
 	medir := func(f func() ([]Socket, error)) (time.Duration, int) {
-		const n = 40
+		const tandas, porTanda = 5, 8
 		var filas int
-		t0 := time.Now()
-		for range n {
-			s, err := f()
-			if err != nil {
-				t.Fatal(err)
+		costos := make([]time.Duration, 0, tandas)
+		for range tandas {
+			t0 := time.Now()
+			for range porTanda {
+				s, err := f()
+				if err != nil {
+					t.Fatal(err)
+				}
+				filas = len(s)
 			}
-			filas = len(s)
+			costos = append(costos, time.Since(t0)/porTanda)
 		}
-		return time.Since(t0) / n, filas
+		slices.Sort(costos)
+		return costos[tandas/2], filas
 	}
 	liv, nl := medir(ListeningSockets)
 	com, nc := medir(AllSockets)
@@ -127,7 +140,7 @@ func TestListeningSocketsCosto(t *testing.T) {
 		}
 		return s, err
 	})
-	t.Logf("tabla liviana: %v por lectura (%d filas) · completa: %v (%d filas) · completa con dueños: %v", liv, nl, com, nc, conDueño)
+	t.Logf("mediana por lectura · tabla liviana: %v (%d filas) · completa: %v (%d filas) · completa con dueños: %v", liv, nl, com, nc, conDueño)
 	if liv > 50*time.Millisecond {
 		t.Errorf("la tabla liviana tarda %v por lectura: releerla cada 200 ms ya no sería barato", liv)
 	}

@@ -162,9 +162,16 @@ func TestWaitAnyPlazoYCancelacion(t *testing.T) {
 	if _, res, _ := WaitAny(ctx, []*Handle{h}, time.Time{}); res != WaitCanceled {
 		t.Fatalf("esperaba WaitCanceled, dio %v", res)
 	}
-	if lat := time.Since(canceledAt); lat > 50*time.Millisecond {
+	// Sin plazo y con el ping vivo (999 s), lo único que puede terminar esta
+	// espera es la cancelación: la cota separa "la despertó" de "no se entera"
+	// con margen para una máquina cargada, donde con los paquetes compilando
+	// en paralelo un solo cuanto del planificador ya pasa los 50 ms. Lo
+	// típico, ~1 ms, queda en el log.
+	lat := time.Since(canceledAt)
+	if lat > 2*time.Second {
 		t.Fatalf("la cancelación tardó %v en despertar la espera", lat)
 	}
+	t.Logf("la cancelación despertó la espera en %v", lat)
 
 	// Sin handles: espera pura hasta el plazo.
 	start = time.Now()

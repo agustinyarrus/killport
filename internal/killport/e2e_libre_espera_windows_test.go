@@ -175,12 +175,21 @@ func TestE2ELibre(t *testing.T) {
 	}
 }
 
+// Los umbrales de tiempo de estas pruebas separan lo correcto de lo que se
+// quiere descartar y van lejos de los dos. Lo descartado es esperar el plazo
+// entero, así que la cota es la mitad del plazo: cubre lanzar el .exe,
+// escribir y salir en una máquina cargada, y sigue lejos del plazo. Lo fino
+// (enterarse a lo sumo 200 ms después, o al instante cuando muere el dueño)
+// lo prueba reaper con reloj falso: TestWaitPortsEscucha y
+// TestWaitPortsLibreDespiertaConLaSalida.
+const plazoE2E = 20 * time.Second
+
 // --wait: el servidor aparece después, SOLO en [::1]. Conectarse a
 // 127.0.0.1 no llega (la trampa de wait-on); mirar la tabla, sí.
 func TestE2EEsperaEscucha(t *testing.T) {
 	dir := binariosE2E(t)
 	Q := puertoLibreDelSistema(t)
-	c := killportAparte(t, dir, sinVentana, strconv.Itoa(Q), "--wait", "20s")
+	c := killportAparte(t, dir, sinVentana, strconv.Itoa(Q), "--wait", plazoE2E.String())
 	time.Sleep(600 * time.Millisecond)
 	select {
 	case <-c.fin:
@@ -195,8 +204,8 @@ func TestE2EEsperaEscucha(t *testing.T) {
 	if c.code != 0 || !strings.Contains(out, strconv.Itoa(Q)+" escucha") || !strings.Contains(out, "escuchador.exe (PID "+strconv.Itoa(pid)) || !strings.Contains(out, "en [::1]") {
 		t.Fatalf("código %d:\n%s", c.code, out)
 	}
-	if latencia > time.Second {
-		t.Fatalf("tardó %v en enterarse", latencia)
+	if latencia >= plazoE2E/2 {
+		t.Fatalf("tardó %v en enterarse (el plazo era %v)", latencia, plazoE2E)
 	}
 	if quienContesta("127.0.0.1:"+strconv.Itoa(Q)) != "" {
 		t.Fatal("el oráculo: a 127.0.0.1 no tendría que contestar nadie")
@@ -208,10 +217,20 @@ func TestE2EEsperaEscucha(t *testing.T) {
 func TestE2EEsperaVenceYNuevo(t *testing.T) {
 	dir := binariosE2E(t)
 	Q := puertoLibreDelSistema(t)
-	t0 := time.Now()
 	out, code := killportE2E(t, dir, nil, strconv.Itoa(Q), "--wait", "1s")
-	if code != 3 || !strings.Contains(out, "Venció el plazo") || time.Since(t0) > 5*time.Second {
-		t.Fatalf("código %d en %v:\n%s", code, time.Since(t0), out)
+	if code != 3 || !strings.Contains(out, "Venció el plazo") {
+		t.Fatalf("código %d:\n%s", code, out)
+	}
+	// Que venza A TIEMPO se mide con el reloj de killport (el "ms" del JSON),
+	// no desde afuera: el reloj de la prueba suma lanzar el .exe y esperar que
+	// salga, que en una máquina cargada son segundos. Ni antes del plazo (con
+	// la tolerancia de medir el arranque de la espera un instante después de
+	// fijarlo) ni mucho después.
+	out, code = killportE2E(t, dir, nil, strconv.Itoa(Q), "--wait", "1s", "--json")
+	var vencida jsonEspera
+	if err := json.Unmarshal([]byte(out), &vencida); err != nil || code != 3 || vencida.Resultado != "vencio" || vencida.PlazoMS != 1000 ||
+		vencida.MS < 900 || vencida.MS > 3000 {
+		t.Fatalf("--wait 1s --json: código %d, %v\n%s", code, err, out)
 	}
 	R, _ := escuchar(t, dir, dir, "127.0.0.1", 0, "viejo")
 	out, code = killportE2E(t, dir, nil, strconv.Itoa(R), "--wait", "1s", "--new")
@@ -243,7 +262,7 @@ func TestE2EEsperaLibre(t *testing.T) {
 		t.Fatalf("el escuchador dijo %q", buf[:n])
 	}
 	Q := campos[1]
-	c := killportAparte(t, dir, sinVentana, Q, "--wait-free", "20s")
+	c := killportAparte(t, dir, sinVentana, Q, "--wait-free", plazoE2E.String())
 	time.Sleep(800 * time.Millisecond)
 	muerte := time.Now()
 	cmd.Process.Kill()
@@ -253,8 +272,8 @@ func TestE2EEsperaLibre(t *testing.T) {
 	if c.code != 0 || !strings.Contains(out, Q+" lo ocupa escuchador.exe") || !strings.Contains(out, Q+" libre") {
 		t.Fatalf("código %d:\n%s", c.code, out)
 	}
-	if latencia > 700*time.Millisecond {
-		t.Fatalf("tardó %v en enterarse de que se liberó", latencia)
+	if latencia >= plazoE2E/2 {
+		t.Fatalf("tardó %v en enterarse de que se liberó (el plazo era %v)", latencia, plazoE2E)
 	}
 	t.Logf("se enteró %v después de la muerte del dueño:\n%s", latencia, out)
 }

@@ -199,8 +199,11 @@ func TestDeadlineCortaLaLecturaYLaConexionSigue(t *testing.T) {
 	if r.d < 150*time.Millisecond || r.d > 2*time.Second {
 		t.Fatalf("cortó a los %v, esperaba ~200 ms", r.d)
 	}
-	// Con el deadline vencido, la próxima lectura ni siquiera llega al kernel.
-	if r := espera(t, enFondo(func() (int, error) { return cliente.Read(make([]byte, 16)) }), time.Second, "la lectura con el deadline vencido"); !errors.Is(r.err, os.ErrDeadlineExceeded) || r.d > 100*time.Millisecond {
+	// Con el deadline vencido, la próxima lectura ni siquiera llega al kernel:
+	// vuelve enseguida en vez de quedar pendiente. "Enseguida" es menos de un
+	// segundo y no de 100 ms: lo que se descarta es que se cuelgue, y en una
+	// máquina cargada lanzar la goroutine y volver ya puede costar un cuanto.
+	if r := espera(t, enFondo(func() (int, error) { return cliente.Read(make([]byte, 16)) }), 5*time.Second, "la lectura con el deadline vencido"); !errors.Is(r.err, os.ErrDeadlineExceeded) || r.d > time.Second {
 		t.Fatalf("con el deadline vencido = %v en %v", r.err, r.d)
 	}
 	// Sin deadline, vuelve a leer.

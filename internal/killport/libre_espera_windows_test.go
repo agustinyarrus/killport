@@ -14,6 +14,7 @@ import (
 	"net/netip"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -299,42 +300,59 @@ func TestCodigoJSON(t *testing.T) {
 
 // sistemaQueEscucha es un sistema cuya tabla liviana es una historia: el
 // socket de este proceso aparece en `desde` y se va en `hasta` (cero =
-// nunca), contados desde que se armó.
+// nunca), contados desde la PRIMERA lectura de la tabla, no desde que se
+// armó. Contar desde el armado hacía que la historia dependiera de la
+// máquina: si entre armarlo y la primera lectura (la terminal, el contexto,
+// los sondeos) pasaban más de `desde`, la espera arrancaba con el socket ya
+// ahí y TestEsperaJSON veía "ya estaba" y una sola lectura. Con desde = 0 el
+// socket es de antes de la espera (su hora es la del armado); con desde > 0,
+// nace durante la espera.
 func sistemaQueEscucha(t *testing.T, local string, desde, hasta time.Duration) *sistema {
 	sys := sistemaDeRed(redConBloque(), false)
 	yo := win.CurrentProcessID()
-	var creado time.Time
-	procs, _ := win.AllProcesses()
-	for _, p := range procs {
-		if p.PID == yo {
-			creado = p.Created
-		}
-	}
-	t0 := time.Now()
-	s := ports.Socket{Proto: ports.TCP, Local: netip.MustParseAddrPort(local), State: ports.Listen, PID: yo, Since: t0.Add(desde)}
-	_ = creado
+	armado := time.Now()
+	var (
+		mu      sync.Mutex
+		primera time.Time
+	)
 	sys.escuchando = func(context.Context) ([]ports.Socket, error) {
-		d := time.Since(t0)
-		if d >= desde && (hasta == 0 || d < hasta) {
-			return []ports.Socket{s}, nil
+		ahora := time.Now()
+		mu.Lock()
+		if primera.IsZero() {
+			primera = ahora
 		}
-		return nil, nil
+		base := primera
+		mu.Unlock()
+		if d := ahora.Sub(base); d < desde || (hasta != 0 && d >= hasta) {
+			return nil, nil
+		}
+		nacio := armado
+		if desde > 0 {
+			nacio = base.Add(desde)
+		}
+		return []ports.Socket{{Proto: ports.TCP, Local: netip.MustParseAddrPort(local), State: ports.Listen, PID: yo, Since: nacio}}, nil
 	}
 	sys.tablas = sys.escuchando
 	return sys
 }
 
+// Un umbral de tiempo separa lo correcto de lo que se quiere descartar, y va
+// lejos de los dos: acá lo descartado es esperar el plazo entero, así que la
+// cota es la mitad del plazo (no "un par de segundos", que en una máquina
+// cargada pueden no alcanzar). Que se entere a lo sumo 200 ms después lo
+// prueba reaper con reloj falso (TestWaitPortsEscucha), donde no depende de
+// la máquina.
 func TestEsperaEscucha(t *testing.T) {
 	sys := sistemaQueEscucha(t, "[::1]:5173", 150*time.Millisecond, 0)
-	o := opciones{wait: 5 * time.Second, waitDado: true}
+	o := opciones{wait: 30 * time.Second, waitDado: true}
 	t0 := time.Now()
 	out, code := capturar(t, func(term *tui.Term) int { return correrEspera(term, sys, []string{"5173"}, o) })
-	if code != cli.ExitOK || time.Since(t0) > 2*time.Second {
+	if code != cli.ExitOK || time.Since(t0) >= o.wait/2 {
 		t.Fatalf("código %d en %v\n%s", code, time.Since(t0), out)
 	}
-	t.Logf("salida (sin consola):\n%s", out)
+	t.Logf("salida (sin consola, en %v):\n%s", time.Since(t0), out)
 	yo := u32(win.CurrentProcessID())
-	for _, want := range []string{"Espero a que escuche el 5173", "hasta 5 s", "5173 escucha", "(PID " + yo, "en [::1]", "a los "} {
+	for _, want := range []string{"Espero a que escuche el 5173", "hasta 30 s", "5173 escucha", "(PID " + yo, "en [::1]", "a los "} {
 		if !strings.Contains(out, want) {
 			t.Errorf("falta %q en:\n%s", want, out)
 		}
@@ -354,11 +372,12 @@ func TestEsperaVence(t *testing.T) {
 // Un puerto que tapa WinNAT: --wait no espera en vano, y dice cómo salir.
 func TestEsperaImposible(t *testing.T) {
 	sys := sistemaQueEscucha(t, "[::1]:5173", time.Hour, 0)
+	o := opciones{wait: 30 * time.Second, waitDado: true}
 	t0 := time.Now()
 	out, code := capturar(t, func(term *tui.Term) int {
-		return correrEspera(term, sys, []string{"3000"}, opciones{wait: 30 * time.Second, waitDado: true})
+		return correrEspera(term, sys, []string{"3000"}, o)
 	})
-	if code != cli.ExitFailure || time.Since(t0) > 5*time.Second {
+	if code != cli.ExitFailure || time.Since(t0) >= o.wait/2 {
 		t.Fatalf("código %d en %v\n%s", code, time.Since(t0), out)
 	}
 	t.Logf("salida (sin consola):\n%s", out)
@@ -389,11 +408,12 @@ func TestEsperaJSON(t *testing.T) {
 		t.Fatalf("código %d, %v\n%s", code, err, out)
 	}
 	p := doc.Puertos[0]
-	// MS se mide desde que arranca la espera, y el reloj del sistema falso
-	// arrancó antes (al armarlo): puede dar menos de los 100 ms del retraso.
-	// Lo que importa es que no estuviera escuchando ya y que se haya medido.
+	// El socket aparece 100 ms después de la primera lectura, y la primera
+	// lectura es posterior al arranque de la espera: MS no puede dar menos de
+	// 100 en ninguna máquina, la primera lectura no lo ve (no "ya estaba") y
+	// hacen falta al menos dos.
 	if doc.Espera != "escuchar" || doc.Resultado != "cumplido" || doc.PlazoMS != 5000 || doc.Lecturas < 2 || p.Puerto != 5173 ||
-		p.Estado != "cumplido" || p.YaEstaba || p.MS <= 0 || len(p.Destinos) != 1 || p.Destinos[0] != "localhost" ||
+		p.Estado != "cumplido" || p.YaEstaba || p.MS < 100 || len(p.Destinos) != 1 || p.Destinos[0] != "localhost" ||
 		len(p.Quienes) != 1 || p.Quienes[0].PID != win.CurrentProcessID() || p.Quienes[0].Direccion != "127.0.0.1" {
 		t.Fatalf("doc: %+v", doc)
 	}
