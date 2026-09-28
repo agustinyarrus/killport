@@ -546,11 +546,12 @@ func TestE2EPuertoSinDueno(t *testing.T) {
 	dir := binariosE2E(t)
 	antes := exclusionesReales(t)
 	var bloque, bloqueUDP, administrada *ports.ExcludedRange
+	var bloquesTCP []*ports.ExcludedRange
 	for i, x := range antes {
 		switch {
 		case x.Family != ports.IPv4:
-		case !x.Administered && x.Proto == ports.TCP && bloque == nil:
-			bloque = &antes[i]
+		case !x.Administered && x.Proto == ports.TCP:
+			bloquesTCP = append(bloquesTCP, &antes[i])
 		case !x.Administered && x.Proto == ports.UDP && bloqueUDP == nil:
 			bloqueUDP = &antes[i]
 		case x.Administered && administrada == nil:
@@ -596,8 +597,21 @@ func TestE2EPuertoSinDueno(t *testing.T) {
 			t.Logf("el %s UDP ya no figura reservado (%s): WinNAT cambió sus bloques mientras tanto", P, pr.Estado)
 		}
 	}
+	// Un rango excluido también puede tener dueño: el 2869 aparece excluido
+	// mientras SSDPSRV lo escucha por http.sys, y ahí killport dice, con razón,
+	// que el puerto está en uso y no se toca. Lo que sigue prueba un puerto
+	// reservado y SIN dueño: el primer bloque que killport vea así.
+	for _, b := range bloquesTCP {
+		P := strconv.Itoa(int(b.Lo + (b.Hi-b.Lo)/2))
+		out, _ := killportE2E(t, dir, nil, P, "--tcp", "--json")
+		if rep := leerJSON[reporteE2E](t, out); len(rep.Puertos) == 1 && rep.Puertos[0].Estado == "reservado" {
+			bloque = b
+			break
+		}
+		t.Logf("el %s (bloque %s) no está solo reservado: pruebo con el bloque siguiente", P, b.Range)
+	}
 	if bloque == nil && administrada == nil {
-		t.Skip("esta máquina no tiene ningún rango excluido (ni WinNAT ni exclusiones administradas): el diagnóstico queda cubierto con el simulador")
+		t.Skip("esta máquina no tiene ningún rango excluido que sirva (un bloque de WinNAT sin dueño o una exclusión administrada): el diagnóstico queda cubierto con el simulador")
 	}
 
 	if bloque != nil {
