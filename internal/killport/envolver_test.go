@@ -36,6 +36,27 @@ func TestEnvolver(t *testing.T) {
 	}
 }
 
+// Un "·" no queda colgando al final de un renglón: abre el que sigue, pegado
+// a su palabra. Si lo que sigue es un comando, el comando sigue entero.
+func TestEnvolverSeparador(t *testing.T) {
+	s := "19 procesos de Windows ocultos · --system los muestra; 75 sockets UDP de clientes ocultos · --all-states los muestra"
+	for ancho := 20; ancho <= 120; ancho++ {
+		got := envolver(s, ancho)
+		if strings.Join(got, " ") != s {
+			t.Fatalf("a %d se perdió texto: %q", ancho, got)
+		}
+		for _, l := range got {
+			if strings.HasSuffix(l, "·") || tui.Width(l) > ancho {
+				t.Fatalf("a %d: %q", ancho, got)
+			}
+		}
+	}
+	got := envolver("mirá el plan · `netsh interface ipv4 show excludedportrange protocol=tcp`", 30)
+	if !slicesContieneEntero(got, "`netsh interface ipv4 show excludedportrange protocol=tcp`") {
+		t.Fatalf("el comando se partió: %q", got)
+	}
+}
+
 func slicesContieneEntero(ls []string, s string) bool {
 	for _, l := range ls {
 		if strings.Contains(l, s) {

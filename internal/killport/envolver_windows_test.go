@@ -56,3 +56,39 @@ func TestNadaSePasaDelAncho(t *testing.T) {
 		}
 	}
 }
+
+// El pie del listado se parte como las demás pistas. Con lo que se ocultó en
+// la captura del README (19 procesos de Windows, 75 sockets UDP), a 100
+// columnas la consola lo cortaba en "--" / "all-states"; ahora el renglón
+// termina antes del separador y el que sigue cuelga debajo del texto. En un
+// pipe va entero, en una línea.
+func TestPieDelListadoSeParte(t *testing.T) {
+	oc := sinMostrar{filas: 94, windows: 19, efimeros: 75}
+	term := tui.Open()
+	term.SetWidth(100)
+	want := []string{
+		"    › 19 procesos de Windows ocultos · --system los muestra; 75 sockets UDP de clientes ocultos",
+		"      · --all-states los muestra",
+		"    › killport <puerto> cierra lo que ocupa ese puerto",
+	}
+	if got := pieListado(term, oc); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("a 100 columnas:\n%s\nesperaba:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	for _, ancho := range []int{60, 80, 120} {
+		term.SetWidth(ancho)
+		got := pieListado(term, sinMostrar{filas: 3, windows: 1, efimeros: 1, linux: 1})
+		for _, l := range got {
+			if tui.Width(l) > ancho || strings.HasSuffix(l, "--") || strings.HasSuffix(l, "·") {
+				t.Errorf("a %d: %q", ancho, got)
+			}
+		}
+	}
+	if got := pieListado(term, sinMostrar{}); len(got) != 1 {
+		t.Errorf("sin nada oculto, solo la pista de cerrar: %q", got)
+	}
+	if pipe := tui.Open(); !pipe.Bounded() {
+		if got := pieListado(pipe, oc); len(got) != 2 || !strings.HasSuffix(got[0], "--all-states los muestra") {
+			t.Errorf("a un pipe, cada pista en una línea: %q", got)
+		}
+	}
+}

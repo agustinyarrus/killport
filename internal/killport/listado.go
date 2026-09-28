@@ -329,7 +329,7 @@ func listadoGeneral(t *tui.Term, sys *sistema, o opciones) int {
 
 	t.Lines(t.Header("killport", "qué escucha en cada puerto", o.version))
 	if len(muestra) == 0 && len(soloWSL) == 0 {
-		t.Line(t.Status(tui.Info, "No hay nada escuchando", pieOcultas(ocultas)))
+		t.Lines(estadoCon(t, tui.Margin, tui.Info, "No hay nada escuchando", pieOcultas(ocultas)))
 		t.Lines(notasWSL(t, mirada))
 		t.Blank()
 		return cli.ExitOK
@@ -347,10 +347,7 @@ func listadoGeneral(t *tui.Term, sys *sistema, o opciones) int {
 	t.Lines(notasCompartidos(t, compartidos, muestra))
 	t.Lines(notasImpostores(t, muestra))
 	t.Lines(notasWSL(t, mirada))
-	if ocultas.filas > 0 {
-		t.Line(t.Hint(pieOcultas(ocultas)))
-	}
-	t.Line(t.Hint("killport <puerto> cierra lo que ocupa ese puerto"))
+	t.Lines(pieListado(t, ocultas))
 	t.Blank()
 
 	if numerar {
@@ -486,11 +483,11 @@ func notasWSL(t *tui.Term, m *miradaWSL) []string {
 	case m.Error != "":
 		out = append(out, estadoCon(t, tui.Margin, tui.Warn, "No pude mirar dentro de WSL", m.Error)...)
 	case len(m.Distros) == 0:
-		out = append(out, tui.Margin+t.Hint("WSL: no hay ninguna distro corriendo (killport no arranca distros)"))
+		out = append(out, pista(t, "WSL: no hay ninguna distro corriendo (killport no arranca distros)")...)
 	case !slices.ContainsFunc(m.Distros, func(d string) bool { return !distroDeMotor(d) }):
 		// La distro de Docker Desktop no es del usuario: lo suyo se ve por sus
 		// contenedores. Para --wsl es lo mismo que ninguna.
-		out = append(out, tui.Margin+t.Hint("WSL: solo corre "+strings.Join(m.Distros, ", ")+", la de Docker Desktop; ninguna distro tuya (killport no arranca distros)"))
+		out = append(out, pista(t, "WSL: solo corre "+strings.Join(m.Distros, ", ")+", la de Docker Desktop; ninguna distro tuya (killport no arranca distros)")...)
 	default:
 		for _, d := range m.Distros {
 			if e, mal := m.Fallas[d]; mal {
@@ -686,8 +683,20 @@ func desde(tt, now time.Time) string {
 	return tui.AgoShort(tt, now)
 }
 
+// pieListado son las pistas del final del listado: qué no se muestra y cómo
+// cerrar. Se parten al ancho de la consola, como las demás pistas: a 100
+// columnas, la de lo oculto la cortaba la consola en "--" / "all-states".
+func pieListado(t *tui.Term, oc sinMostrar) []string {
+	var out []string
+	if oc.filas > 0 {
+		out = append(out, pista(t, pieOcultas(oc))...)
+	}
+	return append(out, pista(t, "killport <puerto> cierra lo que ocupa ese puerto")...)
+}
+
 // pieOcultas dice qué no se muestra y cómo verlo: "19 procesos de Windows
-// ocultos · --system los muestra · 47 sockets UDP de clientes · --all-states".
+// ocultos · --system los muestra; 75 sockets UDP de clientes ocultos ·
+// --all-states los muestra".
 func pieOcultas(oc sinMostrar) string {
 	var partes []string
 	if oc.windows > 0 {

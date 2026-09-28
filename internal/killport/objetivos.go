@@ -105,7 +105,7 @@ func correrPuertos(t *tui.Term, sys *sistema, req ports.Request, o opciones) int
 
 	t.Lines(t.Header("killport", "libera el puerto que necesitás", o.version))
 	for _, n := range req.Names {
-		t.Line(t.Hint(n + ": killport no resuelve nombres (podría ser cualquier dirección); apunto a todo el puerto"))
+		t.Lines(pista(t, n+": killport no resuelve nombres (podría ser cualquier dirección); apunto a todo el puerto"))
 	}
 
 	if plan.Empty() {

@@ -26,7 +26,7 @@ La primera corrida prueba también el guion: si un paso falla, mirar primero si 
 - Sin las tablas de `/proc/net` (no pasa en una distro de verdad), el dueño de un socket de Linux se toma de `ss` sin confirmarlo por el inodo.
 - En el listado general, la nota de un puerto compartido por dos contenedores dice "procesos" (en el bloque de `killport P` ya dice "servidores").
 - Sin probar contra la cosa real: Podman y los contenedores de Windows (solo con respuestas grabadas), un relay de WSL colgado de verdad (el bug WSL#10601 no se puede provocar a propósito), y cancelar `--wait` con Ctrl+C desde mintty (Git Bash).
-- Menores de la revisión: el callback de `EnumWindows` se crea en cada llamada; `defer t.Close()` convive con `os.Exit` en `main.go`; `--new` toma la hora de arranque después de parsear la línea de comandos; nueve funciones largas (`planificarConfig`, `Unmask`, `Verify`, `correrPuertos`, `Focus`…) que se leerían mejor partidas; el comando de `netsh` del plan de `--reserve` no entra en 100 columnas y va en su propio renglón. La pista del pie del listado general (cuántos procesos de Windows y sockets UDP se ocultaron) no se parte como las demás: a 100 columnas la consola la corta en la mitad de `--all-states`.
+- Menores de la revisión: el callback de `EnumWindows` se crea en cada llamada; `defer t.Close()` convive con `os.Exit` en `main.go`; `--new` toma la hora de arranque después de parsear la línea de comandos; nueve funciones largas (`planificarConfig`, `Unmask`, `Verify`, `correrPuertos`, `Focus`…) que se leerían mejor partidas; el comando de `netsh` del plan de `--reserve` no entra en 100 columnas y va en su propio renglón.
 
 ## 3. Distribución
 

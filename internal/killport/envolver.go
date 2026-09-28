@@ -57,7 +57,9 @@ func envolver(s string, ancho int) []string {
 }
 
 // palabras parte en espacios, pero un tramo entre `backticks` es UNA palabra
-// (un comando se copia entero, no se parte al medio).
+// (un comando se copia entero, no se parte al medio), y un "·" suelto va con
+// la palabra que le sigue: el separador abre el renglón que viene en vez de
+// quedar colgando al final del anterior.
 func palabras(s string) []string {
 	var out []string
 	var b strings.Builder
@@ -78,6 +80,12 @@ func palabras(s string) []string {
 	}
 	if b.Len() > 0 {
 		out = append(out, b.String())
+	}
+	for i := 0; i+1 < len(out); i++ {
+		if out[i] == "·" && !strings.HasPrefix(out[i+1], "`") { // un comando sigue siendo UNA palabra
+			out[i] += " " + out[i+1]
+			out = append(out[:i+1], out[i+2:]...)
+		}
 	}
 	return out
 }

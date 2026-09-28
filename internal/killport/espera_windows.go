@@ -57,7 +57,7 @@ func correrEspera(t *tui.Term, sys *sistema, pos []string, o opciones) int {
 
 	t.Lines(t.Header("killport", tituloEspera(spec), o.version))
 	for _, nombre := range req.Names {
-		t.Line(t.Hint(nombre + ": killport no resuelve nombres (podría ser cualquier dirección); espero en todo el puerto"))
+		t.Lines(pista(t, nombre+": killport no resuelve nombres (podría ser cualquier dirección); espero en todo el puerto"))
 	}
 	// Cómo se mira (la tabla de Windows, sin conectarse) lo dice la ayuda: acá
 	// solo el plazo, para que la línea entre en la consola.

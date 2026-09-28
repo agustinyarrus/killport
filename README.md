@@ -186,14 +186,14 @@ Sin argumentos, killport lista lo que escucha la máquina y pregunta cuál liber
       localhost y [::1] → node.exe (PID 30884) en [::1]
       127.0.0.1 y la red por IPv4 → node.exe (PID 41844) en 0.0.0.0
       → killport localhost:5173 cierra solo al que contesta localhost; killport 5173, a todos
-    › 19 procesos de Windows ocultos · --system los muestra; 75 sockets UDP de clientes ocultos · --
-all-states los muestra
+    › 19 procesos de Windows ocultos · --system los muestra; 75 sockets UDP de clientes ocultos
+      · --all-states los muestra
     › killport <puerto> cierra lo que ocupa ese puerto
 
   ¿Cuál liberar? número, o Enter para salir:
 ```
 
-<sub>Recortada: las filas `⋮` son programas de la máquina donde se capturó. El pie partido en `--` / `all-states` es la consola cortando a los 100 caracteres una pista que killport todavía no parte a lo ancho de la ventana, como sí hace con las demás (está en [PENDIENTE](docs/PENDIENTE.md#2-mejoras)).</sub>
+<sub>Recortada: las filas `⋮` son programas de la máquina donde se capturó. Como toda pista que no entra, la de lo oculto se parte al ancho de la consola, con el separador al principio del renglón que sigue.</sub>
 
 La fila 1 ya dice algo que netstat no: el 80 figura a nombre de System (PID 4), pero lo que escucha es un `pwsh.exe` que registró una URL en http.sys (`http.s…wsh.exe` es `http.sys · pwsh.exe` recortado por el medio, y el PID es el suyo). El PROYECTO sale de la carpeta de trabajo de cada proceso, subiendo hasta el marcador más cercano: el nombre, del que lo declara (`package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml`, un `.csproj`) o de la carpeta, y la rama, de `.git\HEAD`, sin ejecutar git.
 
