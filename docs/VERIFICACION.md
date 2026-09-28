@@ -22,6 +22,8 @@ El runner no es la PC de desarrollo, y las pruebas lo saben:
 - **Tiene un motor de Docker propio** en `\\.\pipe\docker_engine`, sin contenedores. killport lo consulta junto con el motor falso de cada prueba; se comprobó en la PC con un motor vacío propio en ese pipe: todas las pruebas de Docker y de punta a punta en verde, y el motor recibió sus consultas.
 - **http.sys:** si no deja registrar la URL de prueba, las pruebas de lo que hay detrás de System se saltean diciendo el código (se comprobó provocando el rechazo: la misma URL registrada dos veces da 183).
 
+Y al revés, lo que le pasa a una PC de desarrollo y no al runner: el camino `/proc` del sondeo lista los fd de todos los procesos, y en MSYS eso se le pregunta a cada proceso de Git Bash, con un segundo de espera por cada uno que no contesta. Con muchas consolas abiertas la lista puede pasar el tope de 30 s; `TestShSondeoRespaldoProc` se saltea entonces diciéndolo (se reprodujo con 36 procesos MSYS suspendidos), y ese camino queda cubierto por las salidas grabadas.
+
 ### Umbrales de tiempo
 
 Una prueba que mide tiempo separa lo correcto de lo que quiere descartar, y el umbral va lejos de los dos. Lo que se descarta casi siempre es "esperó el plazo entero" o "no se enteró": la cota es la mitad del plazo, o un par de segundos contra algo que sin el arreglo no terminaría nunca; no unos cientos de milisegundos del caso bueno, que una máquina cargada se come en un par de cuantos del planificador. Lo fino (enterarse a lo sumo 200 ms después, despertar al instante con la salida del dueño) se prueba en `reaper` con reloj falso, donde no depende de la máquina.
