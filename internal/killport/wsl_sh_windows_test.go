@@ -17,6 +17,7 @@ package killport
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -47,16 +48,23 @@ func dashOSkip(t *testing.T) string {
 // PowerShell, más las carpetas extra que se pidan (un `ss` falso).
 func correrSh(t *testing.T, script string, extraPath ...string) string {
 	t.Helper()
-	path := gitUsrBin + ";" + os.Getenv("PATH")
-	for _, p := range extraPath {
-		path += ";" + p
-	}
-	res, err := win.RunBounded(context.Background(), dashOSkip(t), []string{"-s"},
-		win.Bounded{Timeout: 30 * time.Second, Stdin: []byte(script), Env: []string{"PATH=" + path}})
+	res, err := correrShCrudo(t, script, extraPath...)
 	if err != nil {
 		t.Fatalf("dash: %v (salida %q, errores %q)", err, res.Stdout, res.Stderr)
 	}
 	return string(res.Stdout)
+}
+
+// correrShCrudo es correrSh sin veredicto: la salida (también la parcial) y
+// el error, para la prueba que tiene que distinguir de qué se trata.
+func correrShCrudo(t *testing.T, script string, extraPath ...string) (win.BoundedResult, error) {
+	t.Helper()
+	path := gitUsrBin + ";" + os.Getenv("PATH")
+	for _, p := range extraPath {
+		path += ";" + p
+	}
+	return win.RunBounded(context.Background(), dashOSkip(t), []string{"-s"},
+		win.Bounded{Timeout: 30 * time.Second, Stdin: []byte(script), Env: []string{"PATH=" + path}})
 }
 
 // durmiente lanza un proceso MSYS que duerme (fuera de todo Job: lo tiene que
@@ -234,7 +242,21 @@ func TestShSondeoConSS(t *testing.T) {
 // Sin ss, el respaldo /proc corre entero en dash (en MSYS no hay
 // /proc/net: las tablas vienen vacías, que es lo que se verifica que no rompa).
 func TestShSondeoRespaldoProc(t *testing.T) {
-	out := correrSh(t, scriptSondeo)
+	res, err := correrShCrudo(t, scriptSondeo)
+	out := string(res.Stdout)
+	if errors.Is(err, win.ErrTimeout) && strings.HasSuffix(out, "\n@fd\n") {
+		// Colgado en `ls -l /proc/[0-9]*/fd/`. En Linux eso lee el kernel;
+		// en MSYS, los fd de cada proceso MSYS de la máquina se le PREGUNTAN a
+		// ese proceso por su tubería de señales, y uno que no contesta
+		// (colgado, o saliendo) frena la lista entera. Pasa en una PC con
+		// muchas consolas de Git Bash abiertas: es de MSYS, no del script.
+		// Lo que el script escribe en este camino se prueba igual con las
+		// salidas grabadas (wsl_sondeo_proc*.txt).
+		t.Skipf("el /proc de MSYS se colgó listando los fd de los procesos MSYS de esta máquina (%v)", err)
+	}
+	if err != nil {
+		t.Fatalf("dash: %v (salida %q, errores %q)", err, res.Stdout, res.Stderr)
+	}
 	sd, _, err := parseSondeo("MSYS", out)
 	if err != nil {
 		t.Fatalf("%v\nsalida:\n%s", err, out)
