@@ -6,8 +6,8 @@
 // escuchando a nombre de System (PID 4), no de este proceso: es el caso que
 // killport tiene que desenmascarar.
 //
-// No necesita administrador: una URL de localhost la puede registrar
-// cualquier usuario. Escribe "PUERTO n" apenas la registró, o "ERROR código"
+// No necesita administrador: una URL de localhost (o atada a 127.0.0.1 o a
+// [::1]) la puede registrar cualquier usuario. Escribe "PUERTO n" apenas la registró, o "ERROR código"
 // si http.sys no lo dejó. No termina solo: lo mata la prueba.
 package main
 
@@ -23,6 +23,7 @@ import (
 
 func main() {
 	camino := flag.String("camino", "killport-e2e", "el camino de la URL")
+	host := flag.String("host", "localhost", "el host de la URL: localhost, o una IP para atarla a esa dirección (127.0.0.1, [::1])")
 	puerto := flag.Int("puerto", 0, "el puerto (0 = uno libre)")
 	flag.Parse()
 
@@ -49,7 +50,7 @@ func main() {
 		fmt.Println("ERROR", r)
 		os.Exit(1)
 	}
-	url, _ := syscall.UTF16PtrFromString(fmt.Sprintf("http://localhost:%d/%s/", *puerto, *camino))
+	url, _ := syscall.UTF16PtrFromString(fmt.Sprintf("http://%s:%d/%s/", *host, *puerto, *camino))
 	if r, _, _ := api.NewProc("HttpAddUrl").Call(uintptr(cola), uintptr(unsafe.Pointer(url)), 0); r != 0 {
 		fmt.Println("ERROR", r)
 		os.Exit(1)

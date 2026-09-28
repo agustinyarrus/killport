@@ -2,6 +2,7 @@ package ports
 
 import (
 	"fmt"
+	"net/netip"
 	"strconv"
 	"strings"
 )
@@ -51,6 +52,11 @@ type QueueURL struct {
 	Host   string // "+" y "*" son comodines; si no, un nombre o una IP (sin corchetes)
 	Port   uint16
 	Path   string // desde la barra inicial
+	// Bound es la dirección a la que está atada la URL, si se registró con
+	// una IP (http://127.0.0.1:8080/): http.sys la guarda y netsh la muestra
+	// como un tercer tramo, «host:puerto:ip» (HTTP://127.0.0.1:8080:127.0.0.1/,
+	// HTTP://[::1]:8080:[::1]/). "" si la URL no está atada a una dirección.
+	Bound string
 }
 
 // String la muestra con el esquema y el host en minúsculas, que es como la
@@ -241,10 +247,12 @@ func absoluteWindowsPath(s string) bool {
 
 func isLetter(c byte) bool { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') }
 
-// parseQueueURL reconoce una URL registrada: esquema://host[:puerto]/camino.
+// parseQueueURL reconoce una URL registrada: esquema://host[:puerto[:ip]]/camino.
 // El host puede ser un comodín de http.sys ("+" es "todos los nombres", "*"
 // es "los que nadie más pidió"), así que no pasa por net/url. Sin puerto, el
-// del esquema.
+// del esquema. El tercer tramo es la dirección a la que http.sys ata una URL
+// registrada con una IP: sin leerlo, el 8080 de un HttpListener en
+// http://127.0.0.1:8080/ quedaba sin dueño a la vista.
 func parseQueueURL(text string) (QueueURL, bool) {
 	if strings.ContainsAny(text, " \t") {
 		return QueueURL{}, false
@@ -261,26 +269,26 @@ func parseQueueURL(text string) (QueueURL, bool) {
 	}
 	authority, path, _ := strings.Cut(rest, "/")
 	u.Path = "/" + path
-	port := ""
-	if strings.HasPrefix(authority, "[") {
-		end := strings.IndexByte(authority, ']')
-		if end < 0 {
-			return QueueURL{}, false
-		}
-		u.Host = authority[1:end]
-		switch after := authority[end+1:]; {
-		case after == "":
-		case strings.HasPrefix(after, ":"):
-			port = after[1:]
-		default:
-			return QueueURL{}, false
-		}
-	} else if i := strings.LastIndexByte(authority, ':'); i >= 0 {
-		u.Host, port = authority[:i], authority[i+1:]
-	} else {
-		u.Host = authority
+	host, after, ok := cutHost(authority)
+	if !ok || host == "" {
+		return QueueURL{}, false
 	}
-	if u.Host == "" {
+	u.Host = host
+	port := ""
+	switch {
+	case after == "":
+	case strings.HasPrefix(after, ":"):
+		var bound string
+		port, bound, ok = strings.Cut(after[1:], ":")
+		if ok {
+			b, rest, okB := cutHost(bound)
+			a, err := netip.ParseAddr(b)
+			if !okB || rest != "" || err != nil || a.Zone() != "" {
+				return QueueURL{}, false
+			}
+			u.Bound = a.String()
+		}
+	default:
 		return QueueURL{}, false
 	}
 	switch {
@@ -299,6 +307,23 @@ func parseQueueURL(text string) (QueueURL, bool) {
 		u.Port = uint16(v)
 	}
 	return u, true
+}
+
+// cutHost separa el host del resto de una autoridad: entre corchetes (una
+// IPv6) o hasta el primer ":" (un nombre, un comodín o una IPv4, que no
+// tienen dos puntos). ok=false si abre un corchete y no lo cierra.
+func cutHost(authority string) (host, after string, ok bool) {
+	if strings.HasPrefix(authority, "[") {
+		end := strings.IndexByte(authority, ']')
+		if end < 0 {
+			return "", "", false
+		}
+		return authority[1:end], authority[end+1:], true
+	}
+	if i := strings.IndexByte(authority, ':'); i >= 0 {
+		return authority[:i], authority[i:], true
+	}
+	return authority, "", true
 }
 
 func hasURL(us []QueueURL, u QueueURL) bool {

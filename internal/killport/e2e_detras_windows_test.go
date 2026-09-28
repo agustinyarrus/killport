@@ -267,6 +267,27 @@ func TestE2EHTTPSysCompartido(t *testing.T) {
 	}
 }
 
+// Una URL atada a una dirección (http://127.0.0.1:P/, http://[::1]:P/, lo que
+// escribe quien no quiere exponer su HttpListener a la red): netsh la muestra
+// con un tercer tramo, HTTP://127.0.0.1:P:127.0.0.1/…, y antes no se leía. El
+// puerto quedaba "sin ninguna URL a la vista" y el consejo culpaba a otros
+// usuarios.
+func TestE2EHTTPSysAtadaAUnaIP(t *testing.T) {
+	dir := binariosE2E(t)
+	for _, host := range []string{"127.0.0.1", "[::1]"} {
+		srv, P := registrarHTTP(t, dir, "-camino", "kp-ip", "-host", host)
+		url := "http://" + host + ":" + P + "/KP-IP/"
+		out, code := killportE2E(t, dir, nil, P, "--tcp", "--json")
+		rep := leerJSON[reporteE2E](t, out)
+		if code != 0 || len(rep.Objetivos) != 1 || len(rep.Negativas) != 0 {
+			t.Fatalf("killport %s --json (URL atada a %s): código %d\n%s", P, host, code, out)
+		}
+		if o := rep.Objetivos[0]; o.PID != srv.cmd.Process.Pid || o.Via == nil || o.Via.PID != 4 || !slices.Contains(o.URLs, url) {
+			t.Fatalf("el objetivo = %+v, esperaba a httpfalso.exe (PID %d) con %s\n%s", o, srv.cmd.Process.Pid, url, out)
+		}
+	}
+}
+
 // C2: un programa que se llama como un proceso de Windows y no lo es.
 func TestE2EImpostor(t *testing.T) {
 	dir := binariosE2E(t)

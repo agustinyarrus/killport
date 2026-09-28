@@ -59,6 +59,11 @@ func TestColasMuestras(t *testing.T) {
 		{"netsh_es_requestq_detallada.txt", []string{
 			`"la cola de solicitudes no tiene nombre." ctl=0= procs=[38840=` + pwshReal + `] urls=[http://+:80/TEMPORARY_LISTEN_ADDRESSES/KP-PRUEBA/ http://localhost:47181/KP-DOS/]`,
 		}},
+		// Un HttpListener con URL atadas a una IP (http://127.0.0.1:47233/,
+		// http://[::1]:47234/): netsh les suma la dirección como tercer tramo.
+		{"netsh_es_requestq_ip.txt", []string{
+			`"la cola de solicitudes no tiene nombre." ctl=0= procs=[1856=` + pwshReal + `] urls=[http://[::1]:47234/KP-V6/ http://localhost:47235/KP-NOMBRE/ http://127.0.0.1:47233/KP-V4/]`,
+		}},
 		{"netsh_en_requestq_iis.txt", []string{
 			`"DefaultAppPool" ctl=1480=C:\Windows\System32\svchost.exe procs=[3844=C:\Windows\System32\inetsrv\w3wp.exe 5120=C:\Windows\System32\inetsrv\w3wp.exe] urls=[http://*:80/ https://*:443/ http://[::1]:8080/ADMIN/]`,
 			`"Request queue is unnamed." ctl=0= procs=[4472=] urls=[http://+:5985/WSMAN/ https://+:5986/WSMAN/]`,
@@ -181,6 +186,15 @@ func TestColasURL(t *testing.T) {
 		{"http://[::1]:5000/", "::1", "/", 5000, false, true},
 		{"http://[fe80::1]/", "fe80::1", "/", 80, false, true},
 		{"http://10.0.0.5:65535", "10.0.0.5", "/", 65535, false, true},
+		// Atadas a una IP: host:puerto:ip.
+		{"HTTP://127.0.0.1:47233:127.0.0.1/KP-V4/", "127.0.0.1", "/KP-V4/", 47233, false, true},
+		{"HTTP://[::1]:47234:[::1]/KP-V6/", "::1", "/KP-V6/", 47234, false, true},
+		{"https://LOCALHOST:8443:127.0.0.1/", "LOCALHOST", "/", 8443, true, true},
+		{"http://+:80:/", "", "", 0, false, false},
+		{"http://+:80:x/", "", "", 0, false, false},
+		{"http://+:80:[::1/", "", "", 0, false, false},
+		{"http://+:80:127.0.0.1:1/", "", "", 0, false, false},
+		{"http://+:80:[fe80::1%25eth0]/", "", "", 0, false, false},
 		{"http://+:0/", "", "", 0, false, false},
 		{"http://+:65536/", "", "", 0, false, false},
 		{"http://+:80a/", "", "", 0, false, false},
@@ -198,6 +212,22 @@ func TestColasURL(t *testing.T) {
 		}
 		if ok && (u.Host != c.host || u.Path != c.path || u.Port != c.port || u.Secure != c.secure || u.Raw != c.in) {
 			t.Errorf("parseQueueURL(%q) = %+v", c.in, u)
+		}
+	}
+}
+
+// La dirección a la que está atada una URL se guarda aparte; el host sigue
+// siendo el que se registró.
+func TestColasURLAtada(t *testing.T) {
+	for in, want := range map[string]string{
+		"HTTP://127.0.0.1:47233:127.0.0.1/KP-V4/": "127.0.0.1",
+		"HTTP://[::1]:47234:[::1]/KP-V6/":         "::1",
+		"HTTP://LOCALHOST:47235/KP-NOMBRE/":       "",
+		"http://+:80/":                            "",
+	} {
+		u, ok := parseQueueURL(in)
+		if !ok || u.Bound != want {
+			t.Errorf("parseQueueURL(%q) = %+v, %v; esperaba atada a %q", in, u, ok, want)
 		}
 	}
 }
