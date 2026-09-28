@@ -105,6 +105,32 @@ func TestContextoOtraSesionYServicioPadre(t *testing.T) {
 	}
 }
 
+// El supervisor que compartía la consola del servidor recibe el Ctrl+C de la
+// primera ronda sin ser víctima (Reached); si después se acepta cerrarlo, en
+// la segunda ronda es víctima y su destino lo cuenta su resultado. Antes se
+// sumaba igual como "También cerró … le llegó el Ctrl+C": el mismo proceso,
+// dos veces en la tarjeta, y terminado en seco (no por el Ctrl+C).
+func TestSupervisorCerradoNoSeCuentaComoAlcanzado(t *testing.T) {
+	sup := reaper.Proc{ID: reaper.ID{PID: 19884, Created: t0}, Name: "node.exe"}
+	npm := reaper.Proc{ID: reaper.ID{PID: 50, Created: t0}, Name: "npm.exe"}
+	hijo := reaper.ID{PID: 40012, Created: t0.Add(time.Second)}
+	otro := reaper.Report{
+		Victims: []reaper.VictimResult{
+			{ID: hijo, Name: "node.exe", Outcome: reaper.OutcomeClosed},
+			{ID: sup.ID, Name: "node.exe", Outcome: reaper.OutcomeTerminated},
+		},
+		Reached: []reaper.Proc{npm},
+	}
+	got := fusionarAlcanzados([]reaper.Proc{sup}, otro)
+	if len(got) != 1 || got[0].ID != npm.ID {
+		t.Fatalf("alcanzados = %+v; quiero solo npm.exe (el supervisor ya es víctima)", got)
+	}
+	// Uno que siguió sin ser víctima se conserva.
+	if got := fusionarAlcanzados([]reaper.Proc{npm}, reaper.Report{Victims: otro.Victims}); len(got) != 1 || got[0].ID != npm.ID {
+		t.Fatalf("alcanzados = %+v; quiero npm.exe", got)
+	}
+}
+
 // X-10: el supervisor que relanza no escucha nada; sin consola (o con --yes,
 // que no autoriza a cerrar a quien no se nombró) se da el comando exacto.
 func TestSupervisorSinConsolaDaElComando(t *testing.T) {

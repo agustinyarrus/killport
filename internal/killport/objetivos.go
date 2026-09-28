@@ -1266,7 +1266,7 @@ func ofrecerSupervisor(t *tui.Term, ctx contextoT, sys *sistema, requested ports
 	t.Lines(lineasPuertosAlt(t, otro, plan, nil))
 	// Lo de antes más lo de ahora; los puertos, como quedaron al final.
 	rep.Victims = append(rep.Victims, otro.Victims...)
-	rep.Reached = append(rep.Reached, otro.Reached...)
+	rep.Reached = fusionarAlcanzados(rep.Reached, otro)
 	rep.Canceled = rep.Canceled || otro.Canceled
 	final := map[uint16]reaper.PortResult{}
 	for _, p := range otro.Ports {
@@ -1278,6 +1278,26 @@ func ofrecerSupervisor(t *tui.Term, ctx contextoT, sys *sistema, requested ports
 		}
 	}
 	return rep
+}
+
+// fusionarAlcanzados junta los alcanzados de la primera ronda con los de la
+// ronda del supervisor. El supervisor que compartía la consola del servidor
+// recibió el Ctrl+C de la primera ronda SIN ser víctima, pero en la segunda
+// lo es: su destino ya lo cuenta su resultado (cerró o terminó en seco), y
+// contarlo además como "también cerró" lo nombraría dos veces y con un motivo
+// falso.
+func fusionarAlcanzados(antes []reaper.Proc, otro reaper.Report) []reaper.Proc {
+	victima := make(map[reaper.ID]bool, len(otro.Victims))
+	for _, v := range otro.Victims {
+		victima[v.ID] = true
+	}
+	out := make([]reaper.Proc, 0, len(antes)+len(otro.Reached))
+	for _, p := range antes {
+		if !victima[p.ID] {
+			out = append(out, p)
+		}
+	}
+	return append(out, otro.Reached...)
 }
 
 // alcanzadosQueCerraron son los que recibieron el Ctrl+C sin ser víctimas
