@@ -17,6 +17,11 @@ func setupConsole(f *os.File) (vt bool, restore func(), isConsole bool) {
 	return true, nil, true
 }
 
+func stdinIsConsole(f *os.File) bool {
+	st, err := f.Stat()
+	return err == nil && st.Mode()&os.ModeCharDevice != 0
+}
+
 func consoleWidth(*os.File) int {
 	n, _ := strconv.Atoi(os.Getenv("COLUMNS"))
 	return n
