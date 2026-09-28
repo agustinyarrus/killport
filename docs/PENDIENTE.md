@@ -29,6 +29,6 @@ La primera corrida prueba también el guion: si un paso falla, mirar primero si 
 
 ## 3. Distribución
 
-- Releases en GitHub con el `killport.exe` que genera `build.ps1` y su SHA256 (el script lo imprime al compilar).
-- Integración continua: `go vet` y `go test` en `windows-latest` con GitHub Actions.
+- La primera release: todo listo para crearla ([RELEASE.md](RELEASE.md): `build.ps1`, `SHA256SUMS`, `gh release create` con las notas de [release-v1.0.0.md](release-v1.0.0.md)); falta publicarla.
+- La primera corrida de la CI en GitHub ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)): está probada paso por paso en la PC, con Go 1.26.0, cachés vacías, un motor de Docker en el pipe del runner y la máquina cargada, pero el runner corre como administrador y ahí las pruebas corren elevadas por primera vez. Mirar la lista de salteadas del resumen.
 - Opcional: un instalador (Inno Setup) o un manifiesto de winget/Scoop.

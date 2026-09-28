@@ -1,0 +1,145 @@
+# La CI de killport. Corre donde killport existe, en un Windows de verdad, con
+# el Go que declara go.mod: la versión MÍNIMA (1.26.0, sin línea toolchain).
+# Si pasa con esa, `go install …@latest` anda con cualquier 1.26.x.
+#
+# Qué se mira, en orden: formato, go.mod ordenado, vet (también para Linux:
+# lo puro de internal/ compila fuera de Windows), TODAS las pruebas —las de
+# punta a punta compilan el killport.exe de verdad y lo corren contra la
+# máquina—, que las pruebas no dejen nada en el árbol, y el .exe tal como se
+# publica, con su versión y su SHA256.
+#
+# El runner no es una PC de desarrollo: corre como administrador, con WSL sin
+# distros y con un motor de Docker propio. Las pruebas que dependen de eso se
+# saltean solas y dicen por qué; el paso de pruebas termina con la lista en el
+# resumen de la corrida.
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows · formato, vet, pruebas y build
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      # El Go que instaló setup-go, y ningún otro (sin bajar toolchains).
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          # Sin dependencias (no hay go.sum) no hay módulos que guardar, y
+          # compilar en frío es parte de lo que se prueba.
+          cache: false
+
+      - name: La máquina
+        # Lo que las pruebas miran de este runner: explica las salteadas.
+        timeout-minutes: 2
+        continue-on-error: true
+        run: |
+          go version
+          $yo = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+          "Windows          $([Environment]::OSVersion.Version)"
+          "administrador    $($yo.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))"
+          "dash de Git      $(Test-Path 'C:\Program Files\Git\usr\bin\dash.exe')"
+          "motor de Docker  $(Test-Path '\\.\pipe\docker_engine')"
+          $wsl = Join-Path $env:SystemRoot 'System32\wsl.exe'
+          if (Test-Path $wsl) {
+            $env:WSL_UTF8 = '1'
+            $d = @(& $wsl -l -q 2>$null | Where-Object { $_.Trim() })
+            "distros de WSL   $(if ($d) { $d -join ', ' } else { 'ninguna' })"
+          } else {
+            'distros de WSL   (no hay wsl.exe)'
+          }
+          $global:LASTEXITCODE = 0
+
+      - name: Formato (gofmt)
+        run: |
+          $mal = @(gofmt -l .)
+          if ($mal) {
+            gofmt -d .
+            foreach ($f in $mal) { "::error file=$f::gofmt: sin formato (gofmt -w $f)" }
+            exit 1
+          }
+
+      - name: go.mod ordenado
+        run: go mod tidy -diff
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go vet para Linux (lo puro compila fuera de Windows)
+        env:
+          GOOS: linux
+        run: go vet ./...
+
+      - name: Pruebas
+        run: ./.github/pruebas.ps1 -Informe "$env:RUNNER_TEMP\pruebas.json"
+
+      - name: Guardar los eventos de las pruebas
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pruebas-${{ github.sha }}
+          path: ${{ runner.temp }}/pruebas.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Las pruebas no dejaron nada en el árbol
+        run: |
+          $sucio = @(git status --porcelain)
+          if ($sucio) { $sucio; '::error::las pruebas dejaron archivos en el repo'; exit 1 }
+
+      - name: build.ps1
+        run: ./build.ps1
+
+      - name: El .exe dice su versión y su commit
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          $version = [regex]::Match((Get-Content internal/version/version.go -Raw), 'Version\s*=\s*"([^"]+)"').Groups[1].Value
+          $quiere = "killport $version+$(git rev-parse --short=7 HEAD)"
+          $dice = (./dist/killport.exe --version | Out-String).Trim()
+          "killport --version: $dice"
+          if ($dice -cne $quiere) { "::error::esperaba '$quiere'"; exit 1 }
+          # En una etiqueta, la etiqueta y el código dicen la misma versión.
+          if ($env:REF_TYPE -eq 'tag' -and $env:REF_NAME -cne "v$version") {
+            "::error::la etiqueta $env:REF_NAME no es la versión del código (v$version)"
+            exit 1
+          }
+
+      - name: SHA256SUMS
+        run: |
+          $h = (Get-FileHash -Algorithm SHA256 dist/killport.exe).Hash.ToLowerInvariant()
+          [IO.File]::WriteAllText("$PWD/dist/SHA256SUMS", "$h  killport.exe`n")
+          Get-Content dist/SHA256SUMS
+
+      - name: Guardar el .exe
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: killport-${{ github.sha }}
+          path: |
+            dist/killport.exe
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14

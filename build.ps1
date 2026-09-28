@@ -35,7 +35,10 @@ $module = 'github.com/agustinyarrus/killport'
 $version = ([regex]::Match((Get-Content internal\version\version.go -Raw), 'Version\s*=\s*"([^"]+)"')).Groups[1].Value
 $commit = 'dev'
 if (Get-Command git -ErrorAction SilentlyContinue) {
-    $c = git rev-parse --short HEAD 2>$null
+    # 7 fijo, no el largo automático de git (crece con los objetos del repo):
+    # el mismo commit tiene que estampar lo mismo en cualquier clon para que
+    # el .exe sea reproducible byte a byte (ver docs\RELEASE.md).
+    $c = git rev-parse --short=7 HEAD 2>$null
     if ($LASTEXITCODE -eq 0 -and $c) {
         $commit = $c
         if (git status --porcelain 2>$null) { $commit += '-mod' } # hay cambios sin commitear

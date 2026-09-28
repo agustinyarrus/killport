@@ -11,6 +11,25 @@ go test ./...
 
 590 tests: `killport` 238, `reaper` 165, `win` 96, `ports` 44, `tui` 24, `cli` 11, `win/pipeio` 9, `textdist` 2 y `win/desk` 1. No piden administrador, no cambian la configuración de la máquina y no necesitan Docker ni WSL (lo que depende de ellos se saltea solo, diciendo por qué). Las pruebas de punta a punta compilan el `killport.exe` de verdad (con la etiqueta `killport_e2e`, que solo permite cambiar qué `wsl.exe` corre) y los servidores de prueba de `internal/killport/testdata/e2e`.
 
+## En la CI
+
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) corre en `windows-latest` con el Go mínimo del `go.mod` (1.26.0): `gofmt`, `go mod tidy -diff`, `go vet` (también con `GOOS=linux`: lo puro compila fuera de Windows), todas las pruebas con `-count=1`, que las pruebas no dejen archivos en el árbol y `build.ps1`, con la versión y el commit comprobados en el `.exe` y su SHA256. Las pruebas corren con [`.github/pruebas.ps1`](../.github/pruebas.ps1): la salida de siempre y, al final, la lista de las salteadas con su motivo, también en el resumen de la corrida. Se puede correr igual en cualquier PC (`pwsh .github\pruebas.ps1`).
+
+El runner no es la PC de desarrollo, y las pruebas lo saben:
+
+- **Corre como administrador.** Se saltean las que prueban el camino sin administrador (el hijo elevado que configura la red, detener un servicio sin permiso); ninguna de las demás cambia la máquina.
+- **Tiene WSL sin distros.** `wsl -l --running -q` sale 0 y sin texto (lo dice el código de WSL, `WslClient.cpp`): la prueba contra el `wsl.exe` real ve "ninguna corriendo". El resto de WSL se prueba con dobles y con el `dash` de Git for Windows, que el runner también tiene.
+- **Tiene un motor de Docker propio** en `\\.\pipe\docker_engine`, sin contenedores. killport lo consulta junto con el motor falso de cada prueba; se comprobó en la PC con un motor vacío propio en ese pipe: todas las pruebas de Docker y de punta a punta en verde, y el motor recibió sus consultas.
+- **http.sys:** si no deja registrar la URL de prueba, las pruebas de lo que hay detrás de System se saltean diciendo el código (se comprobó provocando el rechazo: la misma URL registrada dos veces da 183).
+
+### Umbrales de tiempo
+
+Una prueba que mide tiempo separa lo correcto de lo que quiere descartar, y el umbral va lejos de los dos. Lo que se descarta casi siempre es "esperó el plazo entero" o "no se enteró": la cota es la mitad del plazo, o un par de segundos contra algo que sin el arreglo no terminaría nunca; no unos cientos de milisegundos del caso bueno, que una máquina cargada se come en un par de cuantos del planificador. Lo fino (enterarse a lo sumo 200 ms después, despertar al instante con la salida del dueño) se prueba en `reaper` con reloj falso, donde no depende de la máquina.
+
+Dos detalles más. Los sistemas falsos cuentan su historia desde la primera lectura, no desde que se arman: contada desde el armado, una máquina lenta arrancaba la espera con el socket ya ahí (así se volvió inestable `TestEsperaJSON`; con 300 ms de demora simulada, el helper viejo falla igual que aquella vez y el nuevo pasa). Y un costo se mide por tandas: el reloj monotónico de Go en Windows avanza de a ticks del sistema (entre 0,5 y 15,6 ms), así que una lectura suelta de medio milisegundo mide 0 o un tick.
+
+Se comprobó atando `go test` a 4 núcleos y ocupándolos con el doble de hilos: todo en verde, con los tests de tiempo repetidos hasta 40 veces. Con Go 1.26.0 y las cachés vacías, como en la CI, también.
+
 ## Contra la máquina
 
 ```powershell
