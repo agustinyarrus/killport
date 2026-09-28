@@ -309,5 +309,6 @@ func (a *App) unknown(flagText string) error {
 	if s := textdist.Closest(flagText, names); s != "" {
 		return fmt.Errorf("no conozco %s; ¿quisiste decir %s?", flagText, s)
 	}
-	return fmt.Errorf("no conozco %s (mirá %s --help)", flagText, a.Name)
+	// La pista de --help la agrega Start debajo del error: no dos veces.
+	return fmt.Errorf("no conozco %s", flagText)
 }

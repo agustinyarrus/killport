@@ -72,13 +72,23 @@ func (a *App) Help(t *tui.Term) []string {
 			cmdW = max(cmdW, tui.Width(e.Cmd))
 		}
 		cmdW = min(cmdW, width/2)
+		// La descripción se parte al ancho que queda, con las líneas de más
+		// alineadas debajo de la primera: en una consola angosta, una
+		// descripción larga no se sale del borde.
+		descW := max(24, width-2-cmdW-3)
 		for _, e := range a.Examples {
 			cmd := e.Cmd
 			if tui.Width(cmd) > cmdW {
 				out = append(out, tui.Margin+"  "+t.Paint(tui.Sky, cmd))
 				cmd = ""
 			}
-			out = append(out, tui.Margin+"  "+t.Paint(tui.Sky, tui.PadRight(cmd, cmdW))+"   "+t.Paint(tui.Subtle, e.Desc))
+			for i, l := range tui.Wrap(e.Desc, descW) {
+				lead := strings.Repeat(" ", cmdW)
+				if i == 0 {
+					lead = tui.PadRight(cmd, cmdW)
+				}
+				out = append(out, tui.Margin+"  "+t.Paint(tui.Sky, lead)+"   "+t.Paint(tui.Subtle, l))
+			}
 		}
 	}
 

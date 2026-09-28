@@ -1,7 +1,9 @@
 package tui
 
 import (
+	"bufio"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -17,26 +19,46 @@ const (
 // Term es la salida de una herramienta. Sabe si puede pintar (color), si
 // puede mover el cursor (vivo) y cuánto mide la ventana.
 type Term struct {
-	out     *os.File
-	mu      sync.Mutex
-	color   bool
-	live    bool
-	winTerm bool
-	restore func()
-	hidden  bool
+	out      *os.File
+	in       *os.File
+	mu       sync.Mutex
+	color    bool
+	live     bool
+	winTerm  bool
+	stdinTTY bool
+	restore  func()
+	hidden   bool
+	width    int // ancho fijado con SetWidth; 0 = el de la consola
 }
 
 // Open prepara stdout: activa el procesamiento VT en la consola de Windows y
 // respeta NO_COLOR (https://no-color.org).
 func Open() *Term {
-	t := &Term{out: os.Stdout}
+	t := &Term{out: os.Stdout, in: os.Stdin}
 	vt, restore, isConsole := setupConsole(os.Stdout)
 	t.restore = restore
 	t.live = isConsole && vt
 	t.color = t.live && os.Getenv("NO_COLOR") == ""
 	_, wt := os.LookupEnv("WT_SESSION")
 	t.winTerm = t.live && wt
+	t.stdinTTY = stdinIsConsole(os.Stdin)
 	return t
+}
+
+// CanPrompt dice si se puede hacer una pregunta interactiva: la salida es una
+// consola viva Y la entrada es un teclado (no un pipe ni un archivo). Sin
+// esto, una herramienta no debe preguntar: tiene que exigir --yes.
+func (t *Term) CanPrompt() bool { return t.live && t.stdinTTY }
+
+// Prompt escribe la pregunta (sin salto) y lee una línea de la entrada. ok es
+// false si no se pudo leer (EOF, entrada cerrada). No usar si !CanPrompt.
+func (t *Term) Prompt(question string) (respuesta string, ok bool) {
+	t.Print(Margin + question)
+	sc := bufio.NewScanner(t.in)
+	if !sc.Scan() {
+		return "", false
+	}
+	return strings.TrimSpace(sc.Text()), true
 }
 
 // DisableColor apaga los colores (flag --no-color) sin perder el modo vivo.
@@ -49,13 +71,45 @@ func (t *Term) Color() bool { return t.color }
 func (t *Term) Interactive() bool { return t.live }
 
 // Width devuelve las columnas útiles (acotadas a maxWidth, ancho pero legible).
+// Sin consola vale COLUMNS, si está (también en Windows).
 func (t *Term) Width() int {
-	w := consoleWidth(t.out)
+	w := t.width
+	if w <= 0 {
+		w = consoleWidth(t.out)
+	}
+	if w <= 0 {
+		w = columnsEnv()
+	}
 	if w <= 0 {
 		w = fallbackWidth
 	}
 	return min(w, maxWidth)
 }
+
+// unbounded: la salida no es una consola y nadie fijó un ancho (ni SetWidth
+// ni COLUMNS). Lo que no se lee en una ventana no tiene por qué recortarse.
+func (t *Term) unbounded() bool {
+	return t.out != nil && !t.live && t.width <= 0 && consoleWidth(t.out) <= 0 && columnsEnv() <= 0
+}
+
+// Bounded dice si las líneas tienen un ancho que respetar: una consola, o un
+// ancho fijado (SetWidth, COLUMNS). A un pipe o a un archivo sin ancho, cada
+// renglón va entero: no se recorta ni se parte.
+func (t *Term) Bounded() bool { return t.live || t.width > 0 || !t.unbounded() }
+
+// columnsEnv es el ancho que dice la variable COLUMNS (0 si no hay).
+func columnsEnv() int {
+	n, err := strconv.Atoi(strings.TrimSpace(os.Getenv("COLUMNS")))
+	if err != nil || n <= 0 {
+		return 0
+	}
+	return n
+}
+
+// SetWidth fija el ancho en vez de preguntárselo a la consola (0 vuelve a
+// preguntar). Es para dibujar a un ancho conocido: las pruebas de cómo se lee
+// una tabla en 100 columnas y en 180. Se llama antes de dibujar, no mientras.
+func (t *Term) SetWidth(w int) { t.width = w }
 
 // Height devuelve las filas visibles (0 si no se sabe).
 func (t *Term) Height() int { return consoleHeight(t.out) }

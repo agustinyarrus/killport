@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/agustinyarrus/killport/internal/tui"
 )
 
 type opts struct {
@@ -163,6 +165,35 @@ func TestParseTimecode(t *testing.T) {
 	for _, bad := range []string{"", "1:2:3:4", "-5", "ayer", "1:xx"} {
 		if _, err := ParseTimecode(bad); err == nil {
 			t.Errorf("ParseTimecode(%q) tendría que fallar", bad)
+		}
+	}
+}
+
+// La ayuda no se sale del ancho de la consola: los flags, los ejemplos y las
+// notas se parten, y lo que se parte queda alineado debajo de lo suyo.
+func TestAyudaEntraEnElAncho(t *testing.T) {
+	a := New("x", "1.0", "prueba de ancho")
+	a.Usage = []string{"x algo"}
+	var b bool
+	a.Bool(&b, "largo", 'l', strings.Repeat("palabra ", 30))
+	a.Examples = []Example{
+		{Cmd: "x --un-comando-bastante-largo --con muchas", Desc: strings.Repeat("descripción larga ", 12)},
+		{Cmd: "x", Desc: "corta"},
+	}
+	a.Notes = []string{strings.Repeat("nota larga ", 20)}
+	for _, w := range []int{60, 80, 100, 120, 180} {
+		term := tui.Open()
+		term.SetWidth(w)
+		lines := a.Help(term)
+		for _, l := range lines {
+			if tui.Width(l) > w {
+				t.Errorf("ancho %d: línea de %d columnas: %q", w, tui.Width(l), l)
+			}
+		}
+		// La descripción del ejemplo largo sigue entera, en varias líneas.
+		texto := strings.Join(lines, "\n")
+		if strings.Count(texto, "descripción") != 12 {
+			t.Errorf("ancho %d: se perdió texto de la descripción", w)
 		}
 	}
 }

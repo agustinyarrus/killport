@@ -70,6 +70,22 @@ func TestDuration(t *testing.T) {
 	}
 }
 
+// Ago en segundos enteros por debajo del minuto: "hace 9 s", no "hace 9,00 s".
+func TestAgo(t *testing.T) {
+	now := time.Date(2026, 9, 28, 12, 0, 0, 0, time.UTC)
+	for d, want := range map[time.Duration]string{
+		500 * time.Millisecond:               "recién",
+		9*time.Second + 400*time.Millisecond: "hace 9 s",
+		59 * time.Second:                     "hace 59 s",
+		3*time.Minute + 7*time.Second:        "hace 3 min 07 s",
+		50 * time.Hour:                       "hace 2 días",
+	} {
+		if got := Ago(now.Add(-d), now); got != want {
+			t.Errorf("Ago(%v) = %q, esperaba %q", d, got, want)
+		}
+	}
+}
+
 func TestClockPercentCount(t *testing.T) {
 	if got := Clock(3*time.Minute + 7*time.Second); got != "3:07" {
 		t.Errorf("Clock = %q", got)

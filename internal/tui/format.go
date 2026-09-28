@@ -159,11 +159,37 @@ func Ago(t time.Time, now time.Time) string {
 	if d < time.Second {
 		return "recién"
 	}
+	if d < time.Minute {
+		// Segundos enteros: "hace 9,00 s" promete centésimas que no hay (la
+		// cuenta se trunca al segundo).
+		return "hace " + strconv.Itoa(int(d/time.Second)) + " s"
+	}
 	if d >= 48*time.Hour {
 		days := int(d / (24 * time.Hour))
 		return "hace " + strconv.Itoa(days) + " días"
 	}
 	return "hace " + Duration(d.Truncate(time.Second))
+}
+
+// AgoShort es Ago con UNA sola unidad, la más grande: "hace 28 h", "hace 41
+// min", "hace 3 días". Para una columna de tabla, donde "hace 28 h 41 min"
+// ocupa el doble y el detalle no cambia la lectura.
+func AgoShort(t time.Time, now time.Time) string {
+	if t.IsZero() {
+		return "—"
+	}
+	d := now.Sub(t)
+	switch {
+	case d < time.Second:
+		return "recién"
+	case d < time.Minute:
+		return "hace " + strconv.Itoa(int(d/time.Second)) + " s"
+	case d < time.Hour:
+		return "hace " + strconv.Itoa(int(d/time.Minute)) + " min"
+	case d < 48*time.Hour:
+		return "hace " + strconv.Itoa(int(d/time.Hour)) + " h"
+	}
+	return "hace " + strconv.Itoa(int(d/(24*time.Hour))) + " días"
 }
 
 // Rate escribe una tasa en bytes por segundo: "84,2 MB/s".
