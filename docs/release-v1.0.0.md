@@ -50,7 +50,7 @@ En Git Bash o WSL, `sha256sum -c SHA256SUMS`. El `.exe` es reproducible: la mism
 - Más de 600 tests de Go: el algoritmo contra un simulador de eventos discretos con reloj virtual, propiedades contra implementaciones ingenuas, y pruebas de punta a punta que compilan el `killport.exe` de verdad y lo corren contra la máquina (Docker y WSL con dobles fieles; http.sys, impostores y rangos excluidos, de verdad).
 - Cada capa contrastada con una fuente independiente: sockets 42 de 42 y 109 de 109 contra netstat, procesos 417 de 417 contra `Win32_Process`, servicios 147 de 147, Docker 49 de 49 contra su CLI, WSL 31 de 31 contra `ss` y `pgrep` dentro de la distro.
 - 290 de 290 mutaciones atrapadas y 270 de 270 verificaciones de punta a punta contra la máquina real.
-- CI en `windows-latest` con el Go mínimo del `go.mod`: formato, `go vet` (también para Linux), todas las pruebas, y el `.exe` con su versión y su SHA256.
+- CI configurada para `windows-latest` con el Go mínimo del `go.mod`: formato, `go vet` (también para Linux), todas las pruebas, y el `.exe` con su versión y su SHA256. Esta versión se verificó con la misma secuencia en un clon limpio, antes de publicarla.
 
 El detalle, en [docs/VERIFICACION.md](https://github.com/agustinyarrus/killport/blob/v1.0.0/docs/VERIFICACION.md); la arquitectura, en [docs/ARQUITECTURA.md](https://github.com/agustinyarrus/killport/blob/v1.0.0/docs/ARQUITECTURA.md).
 
