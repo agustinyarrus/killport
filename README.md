@@ -27,6 +27,7 @@ Liberá el puerto que necesitás, con cuidado. killport te dice qué ocupa un pu
 
   killport  ·  libera el puerto que necesitás                                               v1.0.0
 
+
   ● node.exe  PID 19316 · hace 5 s
       3000 TCP escuchando en 0.0.0.0 · toda la red
       node web.js
@@ -51,6 +52,7 @@ Liberá el puerto que necesitás, con cuidado. killport te dice qué ocupa un pu
 
   killport  ·  libera el puerto que necesitás                                               v1.0.0
 
+
   ● node.exe  PID 19316 · hace 8 s
       3000 TCP escuchando en 0.0.0.0 · toda la red
       node web.js
@@ -61,6 +63,7 @@ Liberá el puerto que necesitás, con cuidado. killport te dice qué ocupa un pu
 
   › Ctrl+C a node.exe
   ✓ node.exe cerró   18 ms · Ctrl+C
+
 
      killport
 
@@ -78,7 +81,7 @@ Liberá el puerto que necesitás, con cuidado. killport te dice qué ocupa un pu
 
 </details>
 
-Un único `.exe` de 4,7 MB, en Go puro: sin instalador, sin dependencias, sin nube, sin administrador salvo cuando de verdad hace falta. Antes vivía en navaja, una suite de herramientas de consola para Windows; ahora es un proyecto propio.
+Un único `.exe` de unos 5 MB, en Go puro: sin instalador, sin dependencias, sin nube, sin administrador salvo cuando de verdad hace falta. Antes vivía en navaja, una suite de herramientas de consola para Windows; ahora es un proyecto propio.
 
 [Por qué](#por-qué) · [Instalar](#instalar) · [Uso](#uso) · [Recorrido](#recorrido) · [Lo que nunca hace](#lo-que-nunca-hace) · [Cómo funciona](#cómo-funciona) · [Trampas de Windows](#trampas-de-windows) · [Cómo se verificó](#cómo-se-verificó) · [Límites](#límites)
 
@@ -143,14 +146,14 @@ killport 3000 --reserve           # que WinNAT no vuelva a reservar el 3000
 | `-t`, `--tree` | también los procesos hijos |
 | `--timeout T` | cuánto esperar el cierre prolijo antes de ir en seco (3 s) |
 | `--manual` | el servicio que se detiene queda en inicio manual |
-| `--orphans`, `-n NOMBRE`, `--project DIR` | elegir sin nombrar puertos; se combinan y cada uno achica |
+| `--orphans`, `-n`/`--name NOMBRE`, `--project DIR` | elegir sin nombrar puertos; se combinan y cada uno achica |
 | `--free`, `--count N` | el primer puerto (o los N primeros) libre de verdad |
 | `--wait T`, `--wait-free T`, `--any`, `--stable T`, `--new` | esperar a que escuche o a que se libere |
 | `--reserve`, `--unreserve`, `--fix-dynamic` | puertos que reserva Windows |
-| `--tcp`, `--udp`, `-a`, `-s`, `--wsl`, `--no-docker` | qué mirar |
+| `--tcp`, `--udp`, `-a`/`--all-states`, `-s`/`--system`, `--wsl`, `--no-docker` | qué mirar |
 | `--json` | para scripts; sin `--yes`, solo describe |
 
-`killport --help` tiene la ayuda completa, con 19 ejemplos. Respeta `NO_COLOR` y `--no-color`; si la salida no es una consola, no emite ni un escape. Códigos de salida: `0` listo (o ya estaba libre) · `1` una parte · `2` línea de comandos inválida · `3` no se pudo (o venció la espera) · `130` cancelado. Con `--json`, los mismos.
+`killport --help` tiene la ayuda completa, con 19 ejemplos. Respeta `NO_COLOR` y `--no-color`; si la salida no es una consola, no emite ni un escape. Códigos de salida: `0` listo (o ya estaba libre) · `1` una parte · `2` línea de comandos inválida · `3` no se pudo (o venció la espera) · `130` cancelado. Con `--list`, `0` si pudo mirar. Con `--json`, los mismos que el texto.
 
 ## Recorrido
 
@@ -190,9 +193,9 @@ all-states los muestra
   ¿Cuál liberar? número, o Enter para salir:
 ```
 
-<sub>Recortada: las filas `⋮` son programas de la máquina donde se capturó.</sub>
+<sub>Recortada: las filas `⋮` son programas de la máquina donde se capturó. El pie partido en `--` / `all-states` es la consola cortando a los 100 caracteres una pista que killport todavía no parte a lo ancho de la ventana, como sí hace con las demás (está en [PENDIENTE](docs/PENDIENTE.md#2-mejoras)).</sub>
 
-La fila 1 ya dice algo que netstat no: el 80 figura a nombre de System, pero lo que escucha es un `pwsh.exe` que registró una URL en http.sys. Y el PROYECTO sale de la carpeta de trabajo de cada proceso y de su `.git`, sin ejecutar git.
+La fila 1 ya dice algo que netstat no: el 80 figura a nombre de System (PID 4), pero lo que escucha es un `pwsh.exe` que registró una URL en http.sys (`http.s…wsh.exe` es `http.sys · pwsh.exe` recortado por el medio, y el PID es el suyo). El PROYECTO sale de la carpeta de trabajo de cada proceso, subiendo hasta el marcador más cercano: el nombre, del que lo declara (`package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml`, un `.csproj`) o de la carpeta, y la rama, de `.git\HEAD`, sin ejecutar git.
 
 ### Cerrar
 
@@ -476,7 +479,7 @@ PS> $port = killport --free 3000; $port
 3001
 ```
 
-`--wait` espera a que un puerto escuche, mirando la tabla de Windows: no se conecta a nadie, así que no cae en la trampa de `localhost` ni dispara el aviso del Firewall. `--wait-free` espera a que se libere y despierta con la salida del dueño, sin sondear:
+`--wait` espera a que un puerto escuche, mirando la tabla de Windows: no se conecta a nadie, así que no cae en la trampa de `localhost` ni dispara el aviso del Firewall. `--wait-free` espera a que se libere: relee la misma tabla, pero entre lectura y lectura duerme sobre los procesos dueños, así que la salida del dueño lo despierta al instante:
 
 ```text
 > killport 5174 --wait 20s
@@ -564,9 +567,9 @@ Un programa que cierra procesos tiene que ser más conservador que quien lo usa.
 - **Nunca actúa sobre un PID suelto.** Todo proceso es PID + hora de creación. El handle se abre comparando la hora: si no coincide, el PID se recicló y ese proceso no se toca. Mientras el handle está abierto, Windows no puede reciclar el PID.
 - **Nunca se cierra a sí mismo ni a la terminal desde donde lo corrés**, ni a ningún ancestro suyo.
 - **Nunca toca el kernel, un proceso crítico, un `svchost` ni un intermediario** (Docker Desktop, `wslrelay`, VS Code, http.sys, el IP Helper). Cada negativa lleva su motivo y su consejo. Un nombre de Windows protege solo si la ruta es la de System32 y el padre es el esperado: un `svchost.exe` en otra carpeta se muestra como posible impostor y se trata como el programa cualquiera que es.
-- **Nunca manda un Ctrl+C a una consola donde hay alguien que no eligió.** Si el servidor comparte la consola con otros, lo dice antes de preguntar; si ahí hay un intruso, no lo manda y va en seco solo contra lo pedido.
+- **Nunca manda un Ctrl+C a una consola donde hay un extraño.** El Ctrl+C le llega a toda la consola, así que solo se manda si todos los que la comparten son de la familia del servidor: sus ancestros (el `npm` o el supervisor que lo lanzó) y sus hijos, lo mismo que alcanzaría apretarlo en esa ventana. Si le va a llegar a alguien de la familia que no se pidió, lo dice antes de preguntar; si hay un extraño, no lo manda y va en seco solo contra lo pedido.
 - **Nunca actúa sin que lo confirmes**: sin consola hace falta `--yes`, y `--json` sin `--yes` solo describe. Si lo que no se toca sigue sosteniendo el puerto, cerrar a los demás no lo liberaría: lo dice, y con `--yes` no cierra a nadie.
-- **Nunca arranca una distro de WSL ni el motor de Docker**, y nunca aconseja `wsl --shutdown` sin avisar que apaga también Docker Desktop.
+- **Nunca arranca una distro de WSL ni el motor de Docker**, y nunca aconseja `wsl --shutdown` sin decir lo que apaga: todo lo que corre en WSL y, si el motor de Docker Desktop o Podman corre ahí (o no se pudo saber), también ese motor y sus contenedores.
 - **Nunca cambia la red sin mostrarte el plan**, ni con `--yes`. Nunca aconseja borrar una exclusión de puertos ajena ni deshabilitar el driver de http.sys.
 - **Nunca deja nada corriendo.** Los comandos que ejecuta (`netsh`, `wsl.exe`) corren sin ventana, con plazo y dentro de un Job Object que los mata si killport se cae. No hay servicio, tarea programada ni proceso residente.
 - **Nunca le da órdenes a un proceso administrador.** El proceso elevado recibe una selección, vuelve a mirar el sistema y solo toca lo que su propio plan permite.
@@ -589,7 +592,10 @@ flowchart TB
     cli["internal/cli<br/>flags GNU · ayuda · ¿quisiste decir?"]
     desk["win/desk"]
     textdist["internal/textdist"]
+    version["internal/version"]
     main --> kp
+    main --> tui
+    main --> version
     kp --> reaper
     kp --> ports
     kp --> win
@@ -614,7 +620,7 @@ Un detalle: `ID` es clave de mapa y se compara con `==`, y en Go `time.Time` com
 
 ### El bosque y el ancestro común
 
-Todos los procesos salen de una sola llamada, `NtQuerySystemInformation(SystemProcessInformation)`: PID, padre, hora de creación, sesión y nombre de todos, incluidos los protegidos y los de otras sesiones, sin abrir ninguno. Con eso se arma un bosque en O(n), con una regla: la arista hijo → padre vale solo si el padre nació antes que el hijo. Si no, el PID del padre lo reusa otro proceso, y el "padre" que figura es un impostor.
+Todos los procesos salen de una sola llamada, `NtQuerySystemInformation(SystemProcessInformation)`: PID, padre, hora de creación, sesión y nombre de todos, incluidos los protegidos y los de otras sesiones, sin abrir ninguno. Con eso se arma un bosque en O(n), con una regla: la arista hijo → padre vale solo si el padre no nació después que el hijo. Si nació después, el PID del padre lo reusa otro proceso, y el "padre" que figura es un impostor.
 
 Sobre el bosque hay ancestros, subárbol, herederos y el **ancestro común más cercano cruzado**: entre la víctima en el bosque de antes y el dueño nuevo del puerto en el bosque de después. Así se encuentra al supervisor que relanzó al servidor, sin saber cómo se llama:
 
@@ -637,8 +643,8 @@ La misma estructura resuelve la trampa clásica de netstat mostrando el PID de u
 
 ```mermaid
 flowchart TD
-    P0["0 · Abrir un handle por víctima, comparando la hora de creación<br/>ya no está · se recicló · acceso denegado"]
-    P1["1 · Servicios: ControlService(STOP), guiándose por dwWaitHint<br/>Externos: contenedor, proceso Linux, regla de portproxy"]
+    P0["0 · Abrir un handle por víctima, comparando la hora de creación<br/>ya no está · se recicló · acceso denegado · protegido · crítico"]
+    P1["1 · Servicios, de a uno: ControlService(STOP), guiándose por dwWaitHint<br/>Externos, todos a la vez: contenedor, proceso Linux, regla de portproxy"]
     P2["2 · Cierre prolijo: UN Ctrl+C por consola, WM_CLOSE a las ventanas"]
     P3["3 · Esperar a todos juntos hasta --timeout<br/>WaitForMultipleObjects: cada salida se avisa al instante"]
     Q{"¿queda alguien?"}
@@ -651,7 +657,7 @@ flowchart TD
     P1 -. "--force" .-> P4
 ```
 
-Todas las víctimas van en paralelo, con un solo plazo por peldaño y sin polling. El motor no imprime nada: emite eventos tipados (lo que se ve en vivo) y devuelve un reporte con el destino de cada víctima y de cada puerto. A nadie se lo termina en seco sin haber tenido su oportunidad de cerrar prolijo, salvo `--force` o que no haya por dónde pedírselo; es una invariante que se prueba en el simulador.
+Los procesos y los externos van en paralelo, con un solo plazo por peldaño y sin polling; los servicios se detienen de a uno, cada uno con su plazo. El motor no imprime nada: emite eventos tipados (lo que se ve en vivo) y devuelve un reporte con el destino de cada víctima y de cada puerto. A nadie se lo termina en seco sin haber tenido su oportunidad de cerrar prolijo, salvo `--force` o que no haya por dónde pedírselo; es una invariante que se prueba en el simulador.
 
 ### Un Ctrl+C a la consola de otro
 
@@ -688,7 +694,7 @@ El conjunto permitido sale de una sola función, y es la misma que arma el aviso
 
 El plan recuerda la foto con que se armó y pregunta qué puertos están enmascarados (`Plan.Masked`); cada dominio mira detrás y contesta un `Unmasking` por puerto y por socket (dos contenedores pueden publicar el mismo puerto en IP distintas). `Unmask` reescribe el plan con las mismas reglas que el plan original: lo que se encuentra detrás pasa por la misma puerta de negativas, así que una respuesta de un dominio nunca puede volver objetivo al kernel ni a tu terminal. Qué clases se desenmascaran lo decide un solo lugar (`Relay.Unmaskable`).
 
-El pipe de Docker se abre en modo overlapped y con `SECURITY_IDENTIFICATION`: un programa que se adelante con el nombre del pipe no puede hacerse pasar por killport, que puede estar corriendo como administrador. El cliente HTTP es mínimo y propio (`Content-Length`, chunked y hasta EOF, con topes), sin `net/http`: el `.exe` bajó de 8,6 a 4,9 MB.
+El pipe de Docker se abre en modo overlapped y con `SECURITY_IDENTIFICATION`: un programa que se adelante con el nombre del pipe no puede hacerse pasar por killport, que puede estar corriendo como administrador. El cliente HTTP es mínimo y propio (`Content-Length`, chunked y hasta EOF, con topes): sin `net/http` ni `regexp`, el `.exe` bajó de 8,6 a 4,9 MB (medido con Go 1.26), y una prueba con `go list -deps` impide que vuelvan.
 
 ### Verificar con una ventana de asentamiento
 
@@ -707,7 +713,8 @@ stateDiagram-v2
     Releer --> Relanzando: nació uno con la imagen de la víctima, todavía sin escuchar
     Releer --> Contestado: la dirección pedida la contesta otro que ya escuchaba
     Releer --> SinDueno: nadie lo escucha y no se puede usar
-    Relanzando --> Retomado: escucha (hasta 3 s)
+    Relanzando --> Retomado: escucha, o a los 3 s sigue arrancando
+    Relanzando --> Libre: el relanzado murió
     Retomado --> [*]: se nombra al supervisor (ancestro común cruzado)
     Heredero --> [*]: se ofrecen como nueva ronda
     SinDueno --> [*]: diagnóstico
@@ -735,16 +742,16 @@ sequenceDiagram
     participant U as UAC
     participant E as killport elevado
     P->>P: plan y confirmación
-    P->>U: ShellExecuteExW("runas", --elevated-job "v2#59;do=cierre#59;ports=…#59;kill=PID:nanos,…")
+    P->>U: ShellExecuteExW("runas", --elevated-job TRABAJO --result RUTA)<br/>TRABAJO = v2#59;do=cierre#59;ports=…#59;flags=…#59;to=…#59;kill=PID:nanos,…
     U->>E: token de administrador
     E->>E: gramática cerrada: una versión, campos en orden, topes, formas canónicas<br/>lo que no la cumple se rechaza entero
     E->>E: foto propia y plan propio, con las reglas de siempre
     E->>E: actúa solo sobre lo que está en SU plan Y en la selección
-    E-->>P: informe en una carpeta del propio hijo, con nombre fijo
+    E-->>P: el informe, solo si RUTA cae en %LOCALAPPDATA%\killport<br/>o en %TEMP% y tiene el nombre fijo
     P->>P: vuelve a mirar: qué murió, qué regla se borró, qué quedó libre
 ```
 
-Viaja por argumentos, nunca por un archivo que otro proceso pueda cambiar entre que se escribe y se lee. Un proceso se cierra solo si el plan del hijo lo tiene de objetivo y su identidad exacta está en la selección; un servicio, si lo corre el mismo proceso que cuando confirmaste; una regla, si está en el registro con la misma clase, dirección y destino; la red se configura solo si la huella de los pasos coincide con la que confirmaste. El informe sirve para contar: lo que pasó, el padre lo comprueba por su cuenta. La gramática se prueba con 84 textos que tiene que rechazar y 60.000 mutaciones al azar.
+Viaja por argumentos, nunca por un archivo que otro proceso pueda cambiar entre que se escribe y se lee. Un proceso se cierra solo si el plan del hijo lo tiene de objetivo y su identidad exacta está en la selección; un servicio, si lo corre el mismo proceso que cuando confirmaste; una regla, si está en el registro con la misma clase, dirección y destino; la red se configura solo si la huella de los pasos coincide con la que confirmaste. El informe sirve para contar: lo que pasó, el padre lo comprueba por su cuenta. La gramática se prueba con 82 textos que tiene que rechazar, 8 más mandados al `killport.exe` de verdad (sale con `2` sin tocar nada) y 60.000 mutaciones al azar.
 
 ### Esperar sin polling
 
@@ -755,10 +762,10 @@ Lo que sí se relee es la tabla de sockets, porque sin administrador el kernel n
 ### La capa de Windows
 
 - **Tablas de sockets**: `GetExtendedTcpTable` y `GetExtendedUdpTable` con las clases `OWNER_MODULE`, que traen PID, la hora de creación del socket y, en un svchost, el nombre del servicio dueño sin abrir el proceso. El layout se midió en la máquina: filas desde el offset 8 (4 bytes de relleno), TCP4 160 bytes, TCP6 192, UDP4 160, UDP6 176; el puerto es un DWORD con los 2 bytes bajos en orden de red y basura en los altos.
-- **La ruta de cada proceso**: la clase 88 de `NtQuerySystemInformation` (`SystemProcessIdInformation`). `QueryFullProcessImageNameW` se niega en 50 de 51 servicios; la clase 88 contesta los 52.
+- **La ruta de cada proceso**: la clase 88 de `NtQuerySystemInformation` (`SystemProcessIdInformation`). Sin administrador, `QueryFullProcessImageNameW` se negó en 50 de 51 servicios; la clase 88 dio la ruta de todos, sin abrir ninguno.
 - **La carpeta de trabajo de otro proceso**, que Windows no expone: se lee del PEB con tres `ReadProcessMemory` (PEB → `ProcessParameters` → `CurrentDirectory`). En un proceso de 32 bits manda el PEB de 32, el único que sigue un `cd` posterior.
 - **Búferes crudos**: ninguna lectura sin validar antes que la ventana cabe entera; los punteros que el sistema escribe adentro se leen como desplazamientos. Un búfer corrupto termina en error, no en pánico.
-- **DLL por ruta absoluta de System32**: con el nombre pelado, `LoadLibrary` buscaría primero junto al `.exe`, y un DLL plantado ahí ganaría.
+- **DLL por ruta absoluta de System32**: con el nombre pelado, `LoadLibrary` buscaría primero junto al `.exe`, y un DLL plantado ahí ganaría. Solo `kernel32` y `ntdll` van por nombre: son KnownDLL, Windows las carga siempre de System32. Lo mismo con `netsh.exe` y `wsl.exe`, que se lanzan por ruta completa.
 - **El ejecutor acotado**: el único camino para `netsh` y `wsl.exe`. El hijo nace suspendido, entra a un Job Object con `KILL_ON_JOB_CLOSE` y `DIE_ON_UNHANDLED_EXCEPTION` y recién ahí corre, sin ventana, con plazo y tope de salida.
 
 ## Trampas de Windows
@@ -785,9 +792,9 @@ Lo que la documentación no dice y se aprendió midiendo, casi siempre al contra
 
 **En WOW64 hay dos PEB.** Leer el PEB nativo de un proceso de 32 bits da la carpeta con que arrancó; solo el PEB de 32 sigue un `cd` posterior. Lo destapó una mutación que sobrevivía: "en WOW64 manda el PEB de 64 bits" pasaba todas las pruebas hasta que una hizo `cd` en un cmd de 32 bits.
 
-**Desde Git Bash el Ctrl+C llega ignorado.** Un proceso lanzado desde bash hereda el Ctrl+C desactivado: killport lo manda, no llega, y a los 3 s lo termina en seco. No es un error de killport; las pruebas de Ctrl+C reactivan el manejador antes de lanzar sus servidores.
+**Desde Git Bash el Ctrl+C llega ignorado.** Un proceso lanzado desde bash hereda el Ctrl+C desactivado: killport lo manda, no llega, y a los 3 s lo termina en seco. No es un error de killport. Los guiones de Ctrl+C corren desde PowerShell, y la prueba de Go que manda un Ctrl+C de verdad lo reactiva antes de lanzar a quien lo va a recibir.
 
-**Chrome vive en el rango dinámico.** Las pruebas atan TCP en un puerto que da el sistema, y Chrome tiene decenas de sockets UDP efímeros en ese mismo rango. Sin `--tcp`, un `killport P -y` de una prueba podía cerrar el Chrome de quien la corría. Toda prueba que actúa lleva `--tcp` y elige un puerto que no está en ninguna tabla.
+**Chrome vive en el rango dinámico.** Las pruebas atan TCP en un puerto que da el sistema, y Chrome tiene decenas de sockets UDP efímeros en ese mismo rango. Sin `--tcp`, un `killport P -y` de una prueba podía cerrar el Chrome de quien la corría. Toda prueba que cierra por número de puerto lleva `--tcp` y elige un puerto que no está en ninguna tabla.
 
 ## Cómo se verificó
 
@@ -807,7 +814,7 @@ La regla: cada capa se contrasta con algo independiente. Un parser que lee lo qu
 - **Un simulador de eventos discretos** para el algoritmo: reloj virtual que salta al próximo evento, procesos guionados (cuánto tardan en ceder, si ignoran el Ctrl+C, si un supervisor los relanza), consolas compartidas, servicios, contenedores. Un Ctrl+C que cierra a los 420 ms deja el reloj en +420 ms exactos.
 - **Propiedades contra implementaciones ingenuas**, con semilla fija: el conjunto de puertos contra 65.536 booleanos, el bosque en 500 bosques con PID reciclados, el plan en 400 (nunca el kernel, un crítico ni tu terminal), la escalada en 300 escenarios, el aviso del Ctrl+C contra el motor en 600 familias, el puerto libre en 400 semillas, la espera en 300 historias, la tabla en 20.000 disposiciones.
 - **290 mutaciones**, todas atrapadas: un script cambia una línea a propósito (invertir una condición, confundir IPv4 con IPv6), corre las pruebas y restaura el archivo comprobando el hash. Seis sobrevivieron a su primera corrida y cada una destapó una prueba floja.
-- **270 verificaciones de punta a punta** contra la máquina real, con Docker Desktop y Ubuntu en WSL de verdad: 0 fallas, ningún servidor de prueba vivo al terminar y los procesos del usuario intactos.
+- **270 verificaciones de punta a punta** contra la máquina real, con Docker Desktop y Ubuntu en WSL de verdad: 0 fallas, ningún servidor de prueba vivo al terminar y los procesos del usuario intactos. Fue la regresión final, cuando killport todavía vivía en la suite; lo que cambió después, y cómo se probó, está en [VERIFICACION.md](docs/VERIFICACION.md#regresión-final).
 - **CI en `windows-latest`** con el Go mínimo del `go.mod`: `gofmt`, `go vet` (también para Linux), todas las pruebas y el `.exe` con su versión y su SHA256.
 
 El detalle, con los guiones y los números de cada capa: [docs/VERIFICACION.md](docs/VERIFICACION.md).
@@ -817,6 +824,7 @@ El detalle, con los guiones y los números de cada capa: [docs/VERIFICACION.md](
 - **Lo que pide administrador nunca corrió como administrador.** Borrar una regla de `portproxy`, detener un servicio y dejarlo en manual, `--reserve`, `--unreserve`, `--fix-dynamic` y el camino por el UAC están probados con dobles, con el plan que imprimirían y con el proceso elevado corrido sin elevar contra procesos propios. El guion para la primera corrida está listo: [`_oracle/ADMIN.md`](internal/killport/_oracle/ADMIN.md).
 - Sin probar contra la cosa real: Podman y los contenedores de Windows (solo con respuestas grabadas), un relay de WSL colgado de verdad ([WSL#10601](https://github.com/microsoft/WSL/issues/10601) no se puede provocar a propósito) y WSL con `networkingMode=mirrored`, que no tiene `wslrelay`: ahí el puerto figura sin dueño.
 - Un nombre de host (`api.local:3000`) no se resuelve: se toma el puerto entero y se avisa.
+- Toda exclusión de puertos sin `*` (las que no agregó un administrador) se toma como un bloque de WinNAT, con sus consejos. En la PC de desarrollo apareció una que no parece de WinNAT ([PENDIENTE](docs/PENDIENTE.md#2-mejoras)).
 - El supervisor que relanza a un servidor se busca en su padre y su abuelo vivos: uno más arriba, o uno que relanza después de la ventana de verificación, no se ve.
 - `--free` da un puerto libre en ese instante; entre que lo da y que lo usás, otro programa lo puede tomar.
 - Se compila y se prueba para `windows/amd64` (el `.exe` de la release). Para Windows ARM64 compila, pero nunca corrió ahí. Lo puro compila en cualquier sistema, pero killport es solo para Windows.
@@ -834,6 +842,7 @@ internal/
   ports/              puro: conjuntos de puertos, direcciones, puerto libre, parsers
   win/                la API de Windows: sockets, procesos, servicios, consola ajena, ejecutor acotado
     pipeio/           named pipes overlapped con la forma de un net.Conn
+    pipetest/         servidor de named pipe para las pruebas
     desk/             modo y tamaño de la consola propia
     _oracle/          la capa win contra netstat, WMI y un Ctrl+C real
   tui/                consola: paleta, región viva, tarjetas, tablas, formato es-AR
@@ -842,6 +851,8 @@ internal/
   version/            versión y commit, estampados por build.ps1
 demo/                 la grabación del README, su guion de VHS y los servidores de prueba
 docs/                 arquitectura, verificación, pendientes y cómo se arma una release
+.github/              la CI: formato, vet, pruebas y el .exe con su SHA256
+build.ps1             compila dist\killport.exe con la versión y el commit (-Test: antes, vet y pruebas)
 ```
 
 ## Licencia

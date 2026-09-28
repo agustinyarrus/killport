@@ -19,7 +19,7 @@ se ve es la salida real de esa corrida.
 | `servidores.ps1` | la "terminal" oculta de la tienda: lanza los tres servidores y los espera |
 | `tienda/` | el proyecto de juguete: `package.json`, `web.js` (3000), `api.py` (8080), `dev.js` (5173, solo localhost) |
 | `grabar.ps1` | plan B sin VHS: la misma sesión en tu terminal, para grabarla con ScreenToGif u OBS |
-| `demo.gif` · `demo.webm` | la grabación: 13,6 s, 1078×644, 220 KB y 90 KB |
+| `demo.gif` · `demo.webm` | la grabación: 13,6 s a 25 cuadros por segundo, 1078×644, 223 KB y 89 KB |
 | `demo.png` | un cuadro fijo del final de la escena 2 (para quien pide menos movimiento) |
 
 ## Regrabar con VHS

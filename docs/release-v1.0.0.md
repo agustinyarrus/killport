@@ -1,6 +1,6 @@
 # killport 1.0.0
 
-La primera versión de killport como proyecto propio. Antes vivía en navaja, la suite de herramientas de consola para Windows; el código es el que se probó ahí, ahora con su repo, su número de versión y su CI.
+La primera versión de killport como proyecto propio. Antes vivía en navaja, la suite de herramientas de consola para Windows; el código es el que se probó ahí (más dos arreglos de presentación, cada uno con su prueba), ahora con su repo, su número de versión y su CI.
 
 killport es para cuando un servidor de desarrollo quedó ocupando un puerto, o algo dice "el puerto ya está en uso" y no se sabe quién. Dice qué lo ocupa —un proceso, un servicio, un contenedor, un proceso dentro de WSL— y lo cierra como lo harías a mano: Ctrl+C en su ventana y, solo si no cede, en seco. Después comprueba que el puerto haya quedado libre de verdad.
 
