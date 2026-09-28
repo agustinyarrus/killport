@@ -1,6 +1,6 @@
 # Verificación
 
-La regla: cada capa de killport se contrasta con algo **independiente**. Un parser que lee lo que escribió su propio escritor no prueba nada; netstat, `Win32_Process`, el CLI de docker o `ss` dentro de la distro sí.
+La regla: cada capa de killport se contrasta con algo **independiente**. Un parser que lee lo que escribió su propio escritor no prueba nada; netstat, `Win32_Process`, el CLI de docker o `ss` dentro de la distro sí. El [README](../README.md#cómo-se-verificó) tiene el resumen; acá están los comandos, los números y lo que se aprendió. La arquitectura que se verifica está en [ARQUITECTURA.md](ARQUITECTURA.md).
 
 ## Tests de Go
 
@@ -9,7 +9,7 @@ go test ./...
 .\build.ps1 -Test     # go vet + go test, y después compila
 ```
 
-590 tests: `killport` 238, `reaper` 165, `win` 96, `ports` 44, `tui` 24, `cli` 11, `win/pipeio` 9, `textdist` 2 y `win/desk` 1. No piden administrador, no cambian la configuración de la máquina y no necesitan Docker ni WSL (lo que depende de ellos se saltea solo, diciendo por qué). Las pruebas de punta a punta compilan el `killport.exe` de verdad (con la etiqueta `killport_e2e`, que solo permite cambiar qué `wsl.exe` corre) y los servidores de prueba de `internal/killport/testdata/e2e`.
+592 tests: `killport` 240, `reaper` 165, `win` 96, `ports` 44, `tui` 24, `cli` 11, `win/pipeio` 9, `textdist` 2 y `win/desk` 1. No piden administrador, no cambian la configuración de la máquina y no necesitan Docker ni WSL (lo que depende de ellos se saltea solo, diciendo por qué). Las pruebas de punta a punta compilan el `killport.exe` de verdad (con la etiqueta `killport_e2e`, que solo permite cambiar qué `wsl.exe` corre) y los servidores de prueba de `internal/killport/testdata/e2e`.
 
 ## En la CI
 
@@ -97,7 +97,18 @@ Con el `killport.exe` de `dist` de ese día (la 1.1.0 de la suite de la que sali
 | `_oracle\docker.ps1` | contenedores de verdad: nombra, detiene (SIGTERM y SIGKILL), `restart=always`, `--no-docker`, el `[::1]` de wslrelay | 49 de 49 |
 | `_oracle\wsl.ps1 -Distro Ubuntu` | procesos Linux de verdad: nombra, SIGINT, escala a SIGKILL, relay sin nadie detrás, no arranca distros | 31 de 31 |
 
-270 verificaciones, 0 fallas; ningún fixture vivo al terminar, los procesos del usuario intactos, Docker y WSL como estaban. La primera corrida dio 7 fallas en el guion de localhost, todas del guion: esperaba textos y códigos de salida que la revisión cambió a propósito. Mirando esas salidas apareció un defecto de verdad, que ningún chequeo pedía (abajo, la última lección); se arregló con su test y se volvió a correr todo.
+270 verificaciones, 0 fallas; ningún fixture vivo al terminar, los procesos del usuario intactos, Docker y WSL como estaban. La primera corrida dio 7 fallas en el guion de localhost, todas del guion: esperaba textos y códigos de salida que la revisión cambió a propósito. Mirando esas salidas apareció un defecto de verdad, que ningún chequeo pedía (abajo, en las lecciones: el aviso de antes de preguntar); se arregló con su test y se volvió a correr todo.
+
+## Las salidas del README
+
+Las del [recorrido](../README.md#recorrido) y la [demo](../demo/LEEME.md) son corridas de verdad, no texto armado. El 28/09/2026, con killport 1.0.0 compilado desde este repo:
+
+- **La escena**: servidores propios (node, python, un `HttpListener` de .NET en `pwsh`, un supervisor al estilo nodemon que relanza a su hijo y un servidor que ignora el Ctrl+C) en dos proyectos de juguete con su repo git (`tienda` en la rama `feat/carrito`, `landing` en `main`), montados con `subst` como `X:\dev\…`. Cada servidor corre en su propia consola oculta, lanzado por una terminal oculta que se soltó de su padre: la cadena que muestra killport es `pwsh.exe → node.exe`, sin rastro de quién los lanzó. Todo se cerró al final por PID + hora de inicio.
+- **La consola**: cada comando corrió dentro de una pseudoconsola (ConPTY) de 100 columnas, sin ventana, con un arnés que reconstruye la pantalla y contesta las preguntas (`[s/N]`) cuando aparecen. Para killport es una consola de verdad: colores, región viva, preguntas. Los bloques del README son esa pantalla, copiada por un script; lo único que se sacó es la cabecera repetida y, en la tabla del listado general, las filas de otros programas de la máquina (marcadas `⋮`).
+- **WSL**: un `python3 -m http.server` dentro de Ubuntu (WSL 2), cerrado por killport con SIGINT; la distro volvió a detenerse sola.
+- **Lo que no se capturó**: Docker (Docker Desktop no se arranca solo para una captura; su bloque está descrito en el README y lo verifica `_oracle\docker.ps1` contra contenedores de verdad, 49 de 49) y un impostor (la ruta real de la imagen sale entera, aunque la carpeta esté montada con `subst`, y habría mostrado una carpeta de la máquina).
+
+Leer esas salidas enteras, como en la regresión final, encontró un defecto más (la última lección).
 
 ## Lecciones
 
@@ -115,6 +126,7 @@ Los oráculos y las pruebas contra la máquina encontraron defectos que los test
 - **Chrome y el rango dinámico.** Los fixtures atan TCP en un puerto que da el sistema, y Chrome tiene decenas de sockets UDP efímeros en el mismo rango: sin `--tcp`, un `killport P -y` de las pruebas podía cerrar el Chrome del usuario. Toda prueba que actúa lleva `--tcp` y elige un puerto que no está en ninguna tabla.
 - **El Ctrl+C desde Git Bash llega ignorado**: un proceso lanzado desde bash hereda el Ctrl+C desactivado, killport lo manda, no llega, y a los 3 s lo termina en seco. No es un error de killport: las pruebas de Ctrl+C se corren desde PowerShell, y los tests de Go lo reactivan antes de lanzar sus fixtures.
 - **El aviso de antes de preguntar tiene que salir de la misma regla que la acción.** Con un padre en `0.0.0.0` y su hijo en `[::1]` en la misma consola, `killport localhost:P` avisaba "el Ctrl+C le llega también a su padre"; el motor no lo mandaba (el padre quedó al margen del pedido) y cerraba al hijo en seco sin haberlo dicho. Ahora el aviso y el motor usan la misma función, y una propiedad los compara en 600 familias al azar.
+- **Dos rondas, un solo destino por proceso.** Con un supervisor que comparte la consola del servidor, el Ctrl+C de la primera ronda le llega sin ser víctima; si después se acepta cerrarlo, en la segunda ronda es víctima. Al fusionar los dos reportes, la tarjeta lo contaba dos veces ("En seco 1" y "También cerraron 1", con el renglón "le llegó el Ctrl+C", cuando en realidad había terminado en seco). Se vio capturando la salida del README; ahora un alcanzado de la primera ronda que en la segunda es víctima se cuenta por su resultado (`fusionarAlcanzados`, con `TestSupervisorCerradoNoSeCuentaComoAlcanzado`, que falla con la fusión de antes).
 
 ## Pendiente manual: la prueba con administrador
 
