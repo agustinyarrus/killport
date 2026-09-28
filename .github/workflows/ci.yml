@@ -77,7 +77,7 @@ jobs:
           $mal = @(gofmt -l .)
           if ($mal) {
             gofmt -d .
-            foreach ($f in $mal) { "::error file=$f::gofmt: sin formato (gofmt -w $f)" }
+            foreach ($f in $mal) { "::error file=$($f -replace '\\', '/')::gofmt: sin formato (gofmt -w $f)" }
             exit 1
           }
 
@@ -110,13 +110,17 @@ jobs:
           if ($sucio) { $sucio; '::error::las pruebas dejaron archivos en el repo'; exit 1 }
 
       - name: build.ps1
-        run: ./build.ps1
+        run: |
+          # Los acentos y las marcas de build.ps1, en UTF-8 (la consola del runner es OEM).
+          try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch { }
+          ./build.ps1
 
       - name: El .exe dice su versión y su commit
         env:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
+          try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch { }
           $version = [regex]::Match((Get-Content internal/version/version.go -Raw), 'Version\s*=\s*"([^"]+)"').Groups[1].Value
           $quiere = "killport $version+$(git rev-parse --short=7 HEAD)"
           $dice = (./dist/killport.exe --version | Out-String).Trim()
