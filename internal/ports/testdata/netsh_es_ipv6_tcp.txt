@@ -1,0 +1,8 @@
+
+Protocolo tcp Intervalos de exclusión de puertos
+
+Puerto de inicio    Puerto final      
+----------          --------      
+
+* - Exclusiones de puertos administrados.
+

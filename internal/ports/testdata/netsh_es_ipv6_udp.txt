@@ -1,0 +1,9 @@
+
+Protocolo udp Intervalos de exclusión de puertos
+
+Puerto de inicio    Puerto final      
+----------          --------      
+     50000       50059     *
+
+* - Exclusiones de puertos administrados.
+

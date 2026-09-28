@@ -1,0 +1,23 @@
+
+Zzyx qwert HTTP-uiop (asdf ghjkl zxcv):
+---------------------------------------
+
+Bnm qwe rty: Uio pas dfg hjk.
+    Lzx: 2.0
+    Cvb: Nmq
+    Wer tyu 503 iop: Asd
+    Fgh jkl: 1000
+    Zxc vbn mqw ert: 1
+    Yui:
+        Op.: 7321, asdfg: D:\Herramientas con espacios\servidor.exe
+    Hjk lzx cvb:
+    Nm. qw er ty ui: FE00000F20000002
+        Opa: Sdf
+        Bnm qwe rty: Uio pas dfg hjk.
+            Ghj kl zx cvbnm: 1
+            Qwe rtyui:
+                HTTP://EJEMPLO.LOCAL:9090/API/
+        Op. as df gh: FF00000F10000006
+            Lzx: 2.0
+            Cvb: Nmq
+

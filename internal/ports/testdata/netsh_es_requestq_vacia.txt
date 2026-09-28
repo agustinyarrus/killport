@@ -1,0 +1,5 @@
+
+Instantánea del estado del servicio HTTP (vista de cola de solicitudes): 
+----------------------------------------------------------------------- 
+
+

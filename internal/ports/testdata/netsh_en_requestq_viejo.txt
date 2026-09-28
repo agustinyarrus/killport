@@ -1,0 +1,33 @@
+
+Snapshot of HTTP service state (Request Queue View):
+-----------------------------------------------------
+
+Request queue name: Request queue is unnamed.
+    Version: 2.0
+    State: Active
+    Request queue 503 verbosity level: Basic
+    Max requests: 1000
+    Number of active processes attached: 2
+    Controller process ID: 1160
+    Process IDs:
+        3916
+        4020
+    URL groups:
+    URL group ID: FE00000040000001
+        State: Active
+        Request queue name: Request queue is unnamed.
+        Properties:
+            Flow control: QoS Flow Rate: 0
+        Number of registered URLs: 2
+        Registered URLs:
+            HTTP://+:80/REPORTSERVER/
+            HTTP://+:80/REPORTS/
+    Server session ID: FF00000020000001
+        Version: 2.0
+        State: Active
+        Properties:
+            Max bandwidth: 4294967295
+            Timeouts:
+                Entity body timeout (secs): 120
+                Request queue timeout (secs): 120
+

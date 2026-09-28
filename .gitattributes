@@ -10,3 +10,7 @@
 *.webp binary
 *.pdf binary
 *.ico binary
+
+# Los datos de prueba se guardan byte a byte: son salidas reales de Windows
+# (netsh escribe CRLF, wsl.exe UTF-16) y hay pruebas que dependen de eso.
+**/testdata/** -text

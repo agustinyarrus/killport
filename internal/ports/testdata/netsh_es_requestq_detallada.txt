@@ -1,0 +1,44 @@
+
+Instantánea del estado del servicio HTTP (vista de cola de solicitudes): 
+----------------------------------------------------------------------- 
+
+Nombre de cola de solicitudes: la cola de solicitudes no tiene nombre.
+    Versión: 2.0
+    Estado: Active
+    Nivel de detalle de cola de solicitudes 503: Básica
+    Número máx. de solicitudes: 1000
+    Solicitudes activas: 0
+    Solicitudes en cola: 0
+    Antigüedad máxima de solicitudes en cola: 0s
+    Solicitudes recibidas: 0
+    Solicitudes rechazadas: 0
+    Aciertos de caché: 0
+    Número de procesos activos adjuntos: 1
+    Procesos:
+        Id.: 38840, imagen: C:\Program Files\WindowsApps\Microsoft.PowerShell_7.6.6.0_x64__8wekyb3d8bbwe\pwsh.exe
+    Grupos de direcciones URL:
+    Id. de grupo de direcciones URL: FE00000F20000003
+        Estado: Active
+        Nombre de cola de solicitudes: la cola de solicitudes no tiene nombre.
+        Propiedades:
+            Máximo de ancho de banda: heredado
+            Máximo de conexiones: heredado
+            Tiempos de espera:
+                Valores de tiempo de espera heredados
+            Número de direcciones URL registradas: 2
+            Direcciones URL registradas:
+                HTTP://+:80/TEMPORARY_LISTEN_ADDRESSES/KP-PRUEBA/
+                HTTP://LOCALHOST:47181/KP-DOS/
+        Id. de sesión del servidor: FF00000F10000007
+            Versión: 2.0
+            Estado: Active
+            Propiedades:
+                Máx. ancho de banda: 4294967295
+                Tiempos de espera:
+                    Tiempo de espera del cuerpo de la entidad (segundos): 120
+                    Tiempo de espera del cuerpo de la entidad de purga (segundos): 120
+                    Tiempo de espera de la cola de solicitudes (segundos): 120
+                    Tiempo de espera de conexión inactiva (segundos): 120
+                    Tiempo de espera del encabezado (seg): 120
+                    Velocidad mínima de envío (bytes/s): 150
+

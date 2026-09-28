@@ -1,0 +1,6 @@
+
+Intervalo de puerto dinámico de protocolo udp
+-----------------------------------------------------------
+Puerto de inicio    : 49152
+Número de puertos   : 16384
+

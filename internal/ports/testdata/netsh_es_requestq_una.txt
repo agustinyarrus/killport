@@ -1,0 +1,29 @@
+
+Instantánea del estado del servicio HTTP (vista de cola de solicitudes): 
+----------------------------------------------------------------------- 
+
+Nombre de cola de solicitudes: la cola de solicitudes no tiene nombre.
+    Versión: 2.0
+    Estado: Active
+    Nivel de detalle de cola de solicitudes 503: Básica
+    Número máx. de solicitudes: 1000
+    Solicitudes activas: 0
+    Solicitudes en cola: 0
+    Antigüedad máxima de solicitudes en cola: 0s
+    Solicitudes recibidas: 0
+    Solicitudes rechazadas: 0
+    Aciertos de caché: 0
+    Número de procesos activos adjuntos: 1
+    Procesos:
+        Id.: 15152, imagen: C:\Program Files\WindowsApps\Microsoft.PowerShell_7.6.6.0_x64__8wekyb3d8bbwe\pwsh.exe
+    Grupos de direcciones URL:
+    Id. de grupo de direcciones URL: FE00000F20000002
+        Estado: Active
+        Nombre de cola de solicitudes: la cola de solicitudes no tiene nombre.
+            Número de direcciones URL registradas: 1
+            Direcciones URL registradas:
+                HTTP://LOCALHOST:47180/KP-PRUEBA/
+        Id. de sesión del servidor: FF00000F10000006
+            Versión: 2.0
+            Estado: Active
+
