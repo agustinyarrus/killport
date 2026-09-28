@@ -157,7 +157,7 @@ killport 3000 --reserve           # que WinNAT no vuelva a reservar el 3000
 
 ## Recorrido
 
-Todas las salidas de esta sección son reales: killport 1.0.0 en una consola de 100 columnas contra servidores de prueba (la tienda de la demo y un par más), capturadas el 28/9/2026. Las carpetas están montadas como `X:\dev\…` para que no aparezca ninguna ruta de verdad, y en los bloques que cierran o miran puertos se omite la cabecera, que es siempre la misma (`killport  ·  libera el puerto que necesitás  v1.0.0`).
+Todas las salidas de esta sección son reales: killport 1.0.0 en una consola de 100 columnas contra servidores de prueba (la tienda de la demo, un par más, un contenedor de nginx y un programa que reserva puertos), capturadas el 28/9/2026. Las carpetas están montadas como `X:\dev\…` para que no aparezca ninguna ruta de verdad, y en los bloques que cierran o miran puertos se omite la cabecera, que es siempre la misma (`killport  ·  libera el puerto que necesitás  v1.0.0`).
 
 ### El listado
 
@@ -395,7 +395,31 @@ Cuando la tabla nombra a un intermediario, killport mira detrás y el objetivo p
      ● Puertos libres            1 de 1           ● Procesos Linux cerrados   1
 ```
 
-**Docker y Podman.** Si el puerto lo publica un contenedor, el bloque es el del contenedor: nombre, imagen, proyecto y servicio de compose, todos los puertos que publica (y que detenerlo libera también los otros), la política de reinicio y el `docker compose … stop` equivalente. Se detiene por la API del motor (`POST /containers/{id}/stop?t=`, con `t` = `--timeout`), no matando a Docker Desktop. Con el backend de WSL 2, un puerto publicado son tres sockets de dos dueños (el motor en `0.0.0.0` y `[::]`, `wslrelay` en `[::1]`), y se muestran como uno. Lo verifica [`_oracle/docker.ps1`](internal/killport/_oracle/docker.ps1) contra contenedores de verdad (49 de 49).
+**Docker y Podman.** Si el puerto lo publica un contenedor, el bloque es el del contenedor: nombre, imagen, proyecto y servicio de compose, todos los puertos que publica (y que detenerlo libera también los otros), la política de reinicio y el `docker compose … stop` equivalente. Acá, un nginx de prueba con las etiquetas de compose de la tienda, en Docker Desktop 4.91:
+
+```text
+> killport 8088
+
+  ● contenedor kp-prueba-web  nginx:alpine · compose tienda/web
+      8088 TCP escuchando en ∗ v4+v6 · toda la red
+      publica 8088 → 80/tcp, 8443 → 443/tcp
+      se detiene entero: libera también 8443
+      reinicio: unless-stopped (detenido a mano, no vuelve solo)
+      es lo mismo que `docker compose -p tienda stop web`
+      Windows lo ve como com.docker.backend.exe (PID 38200): es Docker Desktop, no se toca
+
+  ¿Detener el contenedor kp-prueba-web y liberar el 8088? [s/N] y
+
+  › Deteniendo el contenedor kp-prueba-web
+  ✓ el contenedor kp-prueba-web se detuvo   403 ms · stop del motor
+
+
+     killport
+
+     ● Puertos libres           1 de 1            ● Contenedores detenidos   1
+```
+
+Se detiene por la API del motor (`POST /containers/{id}/stop?t=`, con `t` = `--timeout`), no matando a Docker Desktop. Con el backend de WSL 2, un puerto publicado son tres sockets de dos dueños (el motor en `0.0.0.0` y `[::]`, `wslrelay` en `[::1]`), y se muestran como uno. Lo verifica [`_oracle/docker.ps1`](internal/killport/_oracle/docker.ps1) contra contenedores de verdad (49 de 49).
 
 **portproxy.** Si el puerto lo tiene el servicio IP Helper, es una regla de `netsh interface portproxy`: killport la muestra con el comando exacto que la borra y la borra (pide administrador), revalidándola contra el registro antes y después. El servicio no se toca: de él dependen el reenvío de localhost de WSL y los túneles de IPv6, que el `net stop iphlpsvc` de los foros corta.
 
