@@ -1,6 +1,6 @@
 # killport 1.0.0
 
-La primera versión de killport como proyecto propio. Antes vivía en navaja, la suite de herramientas de consola para Windows; el código es el que se probó ahí (más dos arreglos de presentación, cada uno con su prueba), ahora con su repo, su número de versión y su CI.
+La primera versión de killport como proyecto propio. Antes vivía en navaja, la suite de herramientas de consola para Windows; el código es el que se probó ahí (más dos arreglos de presentación y dos de diagnóstico, cada uno con su prueba), ahora con su repo, su número de versión y su CI.
 
 killport es para cuando un servidor de desarrollo quedó ocupando un puerto, o algo dice "el puerto ya está en uso" y no se sabe quién. Dice qué lo ocupa —un proceso, un servicio, un contenedor, un proceso dentro de WSL— y lo cierra como lo harías a mano: Ctrl+C en su ventana y, solo si no cede, en seco. Después comprueba que el puerto haya quedado libre de verdad.
 
@@ -13,7 +13,7 @@ killport es para cuando un servidor de desarrollo quedó ocupando un puerto, o a
 **Lo que hay detrás del dueño.**
 - Docker Desktop o Podman: detiene el contenedor por la API del motor, no Docker Desktop.
 - WSL (`wslrelay`): cierra el proceso Linux que escucha adentro —SIGINT, SIGTERM y recién después SIGKILL— y nunca arranca una distro.
-- System (PID 4): busca qué programa registró la URL en http.sys y cierra ese. El 445 y el 139 son compartir archivos y no se tocan.
+- System (PID 4): busca qué programa registró la URL en http.sys (también si la ató a una IP, como `http://127.0.0.1:8080/`) y cierra ese. El 445 y el 139 son compartir archivos y no se tocan.
 - IP Helper: borra la regla de `portproxy`, no el servicio.
 - Servicios (SQL Server, PostgreSQL): los detiene como servicio, porque si no Windows los revive; con `--manual` quedan en inicio manual y no vuelven al reiniciar.
 
@@ -21,7 +21,7 @@ killport es para cuando un servidor de desarrollo quedó ocupando un puerto, o a
 
 **localhost no es 127.0.0.1.** Dos procesos pueden escuchar el mismo puerto en `[::1]` y en `0.0.0.0` sin que ninguno dé error: el clásico "el navegador muestra la versión vieja". El listado los marca, dice a cuál llega cada destino, y `killport localhost:5173` apunta solo a ese.
 
-**Puertos que reserva Windows.** Distingue un puerto ocupado de uno excluido por WinNAT o Hyper-V, y lo confirma con un bind exclusivo. `--reserve` lo reserva para vos, `--unreserve` lo devuelve y `--fix-dynamic` arregla un rango dinámico corrido. Cambian la red de toda la máquina: muestran el plan y preguntan siempre, también con `--yes`.
+**Puertos que reserva Windows.** Distingue un puerto ocupado de uno excluido, lo confirma con un bind exclusivo y dice de quién es la exclusión: un bloque de WinNAT (Hyper-V, WSL, Docker), el puerto que aparta http.sys mientras un servicio lo atiende (el 2869 de SSDP, el 5357 de WSD) o la reserva de un programa. Solo a lo de WinNAT le ofrece lo de WinNAT: `--reserve` lo reserva para vos, `--unreserve` lo devuelve y `--fix-dynamic` arregla un rango dinámico corrido. Cambian la red de toda la máquina: muestran el plan y preguntan siempre, también con `--yes`.
 
 **Elegir sin nombrar puertos.** `--orphans` (lo que quedó escuchando sin su terminal), `-n node` (por nombre o ruta) y `--project .` (lo que corre en esta carpeta, con su rama). Se combinan: cada uno achica.
 

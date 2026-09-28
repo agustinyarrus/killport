@@ -94,7 +94,7 @@ Un único `.exe` de unos 5 MB, en Go puro: sin instalador, sin dependencias, sin
 - **El dueño que figura no es el que escucha.** El 80 a nombre de System (PID 4) casi siempre es http.sys trabajando para otro programa: la pregunta de Stack Overflow sobre eso ([1430141](https://stackoverflow.com/questions/1430141)) tiene 455 votos y más de 720.000 visitas, y es una ronda de adivinanzas. `com.docker.backend.exe` es Docker Desktop entero publicando un contenedor, `wslrelay.exe` es WSL reenviando un proceso Linux y `svchost.exe` puede ser una regla de `portproxy` olvidada. Matar al que figura rompe otra cosa y el puerto sigue ocupado.
 - **Otro lo vuelve a tomar.** nodemon, pm2 o un servicio relanzan al servidor en menos de un cuarto de segundo, y el puerto parece "inmatable".
 - **Dos escuchan el mismo puerto.** Uno en `[::1]` y otro en `0.0.0.0`, sin error: el navegador muestra la versión vieja y netstat muestra dos filas que nadie mira.
-- **Nadie lo tiene.** WinNAT reservó el bloque para Hyper-V, WSL o Docker: no hay proceso que matar, y el [issue de Docker](https://github.com/docker/for-win/issues/3171) que lo cuenta tiene 184 👍 y sigue abierto.
+- **Nadie lo tiene.** WinNAT reservó el bloque para Hyper-V, WSL o Docker: no hay proceso que matar, y el [issue de Docker](https://github.com/docker/for-win/issues/3171) que lo cuenta tiene 184 👍 y sigue abierto. Y no toda exclusión es de WinNAT: el 2869 y el 5357 que aparecen en tantas tablas los aparta Windows mientras sus servicios los atienden, y ahí el `net stop winnat` de las recetas corta la red de WSL y Docker para nada.
 
 killport resuelve cada uno de esos casos, y en los que no se puede resolver dice por qué y qué hacer.
 
@@ -399,7 +399,7 @@ Cuando la tabla nombra a un intermediario, killport mira detrás y el objetivo p
 
 **portproxy.** Si el puerto lo tiene el servicio IP Helper, es una regla de `netsh interface portproxy`: killport la muestra con el comando exacto que la borra y la borra (pide administrador), revalidándola contra el registro antes y después. El servicio no se toca: de él dependen el reenvío de localhost de WSL y los túneles de IPv6, que el `net stop iphlpsvc` de los foros corta.
 
-**Servicios.** Un servicio de terceros (SQL Server, PostgreSQL, Apache) se detiene como servicio, porque si se mata el proceso el administrador de servicios lo revive. El bloque dice su tipo de inicio y si vuelve solo al reiniciar; `--manual` lo deja en inicio manual y dice cómo deshacerlo. Una tabla chica de sospechosos de siempre (IIS y MsDepSvc en el 80, VMware en el 443, Reporting Services, WinRM) agrega su consejo. Lo de Windows no se toca, con el motivo:
+**Servicios.** Un servicio de terceros (SQL Server, PostgreSQL, Apache) se detiene como servicio, porque si se mata el proceso el administrador de servicios lo revive. El bloque dice su tipo de inicio y si vuelve solo al reiniciar; `--manual` lo deja en inicio manual y dice cómo deshacerlo. Una tabla chica de sospechosos de siempre (IIS y MsDepSvc en el 80, VMware en el 443, Reporting Services, WinRM, y los de Windows que atienden por http.sys: SSDP en el 2869, WSD en el 5357) agrega su consejo. Lo de Windows no se toca, con el motivo:
 
 ```text
 > killport 445 135 --list
@@ -421,7 +421,16 @@ Cuando la tabla nombra a un intermediario, killport mira detrás y el objetivo p
 
 ### El puerto que reserva Windows
 
-Nadie lo escucha y aun así da `EACCES`: WinNAT reservó el bloque. killport lo distingue de un puerto ocupado sondeándolo con un bind exclusivo, nombra el bloque y da las salidas:
+Nadie lo escucha y aun así da `EACCES`: Windows lo excluyó. La tabla de exclusiones (`netsh int ipv4 show excludedportrange`) no dice quién puso cada fila, solo si la agregó un administrador (la marca `*`). killport lo distingue de un puerto ocupado sondeándolo con un bind exclusivo, deduce de quién es por la forma de la fila y por lo que ve en http.sys, y solo a lo que es de WinNAT le da las salidas de WinNAT:
+
+| La fila | De quién es | Qué dice killport |
+|---|---|---|
+| 100 puertos, sin `*` | WinNAT, para Hyper-V, WSL y Docker; los elige de nuevo en cada arranque | el bloque, `--reserve` y reiniciar WinNAT |
+| un puerto TCP, sin `*`, con algo de http.sys ahí | http.sys, mientras atiende ese puerto: el 2869 de SSDP y el 5357 de WSD van y vienen así | para qué es y a nombre de quién; se va sola |
+| cualquier otra sin `*` | un programa que pidió una reserva mientras corre; Windows no dice cuál | se va cuando ese programa la suelta o termina |
+| con `*` | un administrador (o `killport --reserve`) | un programa que lo pide lo puede usar |
+
+Un bloque de WinNAT:
 
 ```text
 > killport 55200 --list
@@ -436,7 +445,37 @@ Nadie lo escucha y aun así da `EACCES`: WinNAT reservó el bloque. killport lo 
     → el 55250 está libre, si te sirve otro puerto
 ```
 
-`--reserve` agrega una exclusión administrada para ese puerto (deteniendo WinNAT solo si un bloque suyo lo tapa, y volviéndolo a arrancar siempre), `--unreserve` la quita y `--fix-dynamic` devuelve el rango dinámico a 49152–65535. Cambian la red de toda la máquina, así que muestran el plan paso por paso y preguntan siempre, también con `--yes`; sin consola no hacen nada.
+La reserva de un programa (una de prueba, de 7 puertos, pedida sin administrador): ni `--reserve` ni reiniciar WinNAT la sacan, y killport no los ofrece.
+
+```text
+> killport 54465
+
+  · puerto 54465 lo reserva Windows
+      cae en la exclusión 54462–54468, que no es de WinNAT (sus bloques son de 100 puertos) ni la
+      agregó un administrador: la tiene reservada un programa mientras corre, y Windows no dice cuál
+    → no hay proceso a la vista que cerrar: la reserva se va cuando ese programa la suelta o
+      termina; ni reservarlo ni reiniciar WinNAT la sacan
+    → el 54469 está libre, si te sirve otro puerto
+```
+
+Y el 2869 mientras SSDP lo atiende (se lo provocó suscribiéndose a los avisos de un dispositivo UPnP de la red). La tabla lo pone a nombre de System; detrás está el servicio SSDPSRV, que no se toca, y la línea de abajo dice qué es y qué se puede hacer sin romper nada:
+
+```text
+> killport 2869 --list
+
+  ● 2869 — svchost.exe  PID 6528 · a través de System
+      registró http://*:2869/UPNP/EVENTING/
+      no se toca: lo escucha el servicio de Windows SSDPSRV (dentro de svchost)
+      → pará el servicio con `net stop SSDPSRV` como administrador; no se mata el svchost
+      servicio SSDPSRV · inicio manual: no vuelve solo: arranca cuando alguien lo pide
+      es SSDP (UPnP), el descubrimiento de dispositivos de la red: Windows lo atiende mientras algún
+        programa sigue los avisos de un dispositivo UPnP (el router, un televisor) o esta PC
+        comparte uno, y lo suelta solo: sin romper nada, usá otro puerto
+
+    › solo miré; killport <puerto> -y lo cierra
+```
+
+`--reserve` agrega una exclusión administrada para ese puerto (deteniendo WinNAT solo si un bloque SUYO lo tapa, y volviéndolo a arrancar siempre), `--unreserve` la quita y `--fix-dynamic` devuelve el rango dinámico a 49152–65535. Cambian la red de toda la máquina, así que muestran el plan paso por paso y preguntan siempre, también con `--yes`; sin consola no hacen nada. Si lo que tapa el puerto es de http.sys o de un programa, `--reserve` se niega y dice por qué: detener WinNAT no lo libera.
 
 ### Elegir sin nombrar puertos
 
@@ -570,7 +609,7 @@ Un programa que cierra procesos tiene que ser más conservador que quien lo usa.
 - **Nunca manda un Ctrl+C a una consola donde hay un extraño.** El Ctrl+C le llega a toda la consola, así que solo se manda si todos los que la comparten son de la familia del servidor: sus ancestros (el `npm` o el supervisor que lo lanzó) y sus hijos, lo mismo que alcanzaría apretarlo en esa ventana. Si le va a llegar a alguien de la familia que no se pidió, lo dice antes de preguntar; si hay un extraño, no lo manda y va en seco solo contra lo pedido.
 - **Nunca actúa sin que lo confirmes**: sin consola hace falta `--yes`, y `--json` sin `--yes` solo describe. Si lo que no se toca sigue sosteniendo el puerto, cerrar a los demás no lo liberaría: lo dice, y con `--yes` no cierra a nadie.
 - **Nunca arranca una distro de WSL ni el motor de Docker**, y nunca aconseja `wsl --shutdown` sin decir lo que apaga: todo lo que corre en WSL y, si el motor de Docker Desktop o Podman corre ahí (o no se pudo saber), también ese motor y sus contenedores.
-- **Nunca cambia la red sin mostrarte el plan**, ni con `--yes`. Nunca aconseja borrar una exclusión de puertos ajena ni deshabilitar el driver de http.sys.
+- **Nunca cambia la red sin mostrarte el plan**, ni con `--yes`. Nunca aconseja borrar una exclusión de puertos ajena, deshabilitar el driver de http.sys ni detener WinNAT por un puerto que no aparta WinNAT.
 - **Nunca deja nada corriendo.** Los comandos que ejecuta (`netsh`, `wsl.exe`) corren sin ventana, con plazo y dentro de un Job Object que los mata si killport se cae. No hay servicio, tarea programada ni proceso residente.
 - **Nunca le da órdenes a un proceso administrador.** El proceso elevado recibe una selección, vuelve a mirar el sistema y solo toca lo que su propio plan permite.
 
@@ -726,7 +765,13 @@ stateDiagram-v2
 
 Un puerto que nadie escucha se **sondea antes** de diagnosticarlo: `socket` + `bind` sin `listen` (así no salta el aviso del Firewall), exclusivo (`SO_EXCLUSIVEADDRUSE`) y en IPv6 con `IPV6_V6ONLY`, para que cada familia se sondee por lo suyo. Lo exclusivo importa: un bind común a `0.0.0.0` dice "libre" aunque otro proceso tenga `127.0.0.1` en ese puerto, porque para Windows una dirección específica y un comodín no chocan.
 
-Con el sondeo y los rangos excluidos de `netsh` se distingue: una exclusión administrada que deja atar es un puerto libre para vos; un bloque de WinNAT es "lo reserva Windows", con remedios tipados que se convierten en comandos (`--reserve` con el protocolo del bloque, reiniciar WinNAT). Con exclusivo, `WSAEACCES` es ambiguo (rango excluido, o un socket ajeno con `SO_REUSEADDR`), así que la tabla de sockets es la fuente primaria y el sondeo solo desempata.
+Con el sondeo y los rangos excluidos de `netsh` se distingue: una exclusión administrada que deja atar es un puerto libre para vos; una sin `*` es "lo reserva Windows", y de quién es sale de la forma de la fila (`ExcludedRange.Origin`):
+
+- **WinNAT** aparta bloques de exactamente 100 puertos, sin alinear (en esta máquina, 55150, 55308 y 55408); lo mismo todas las tablas de los issues públicos (Docker, WSL, multipass, duplicati). Es el único que recibe remedios tipados de WinNAT, que se convierten en comandos (`--reserve` con el protocolo del bloque, reiniciar WinNAT).
+- **http.sys** aparta cada puerto TCP que atiende, en IPv4 y en IPv6 (aunque la URL esté atada a `127.0.0.1`), mientras lo atiende: una fila de un puerto por URL, que se va con ella. La prueba la arma el adaptador y solo si hay una fila así: una cola con una URL en ese puerto, el kernel escuchándolo, o la reserva de URL de Windows (`netsh http show urlacl`), que dice para qué es aunque la cola sea de otro usuario. Las cuentas se leen del SDDL de la reserva, que no se traduce (`LS` es Servicio local en cualquier idioma), y el SID de un servicio (`S-1-5-80-…`, el SHA-1 de su nombre) se resuelve a su nombre. Una tabla chica de servicios de Windows (SSDP, WSD, WinRM, el uso compartido del Reproductor) dice para qué es.
+- **Un programa** puede pedir una reserva en tiempo de ejecución (`SIO_ACQUIRE_PORT_RESERVATION`, sin administrador) del tamaño que quiera: dura lo que su socket, y Windows no dice de quién es. Es lo que queda cuando no es ninguna de las otras.
+
+Con exclusivo, `WSAEACCES` es ambiguo (rango excluido, o un socket ajeno con `SO_REUSEADDR`), así que la tabla de sockets es la fuente primaria y el sondeo solo desempata.
 
 ### Quién contesta en localhost
 
@@ -782,7 +827,11 @@ Lo que la documentación no dice y se aprendió midiendo, casi siempre al contra
 
 **El ayudante se ve a sí mismo.** Al engancharse a la consola del objetivo, el ayudante del Ctrl+C aparece en la lista de miembros: sin excluirlo, siempre había un intruso. Y "no hay consola" son tres códigos de error (5, 6 y 87), no uno.
 
-**netsh habla el idioma de Windows** y escribe UTF-8 a un pipe aunque la consola sea 850. Los parsers leen la forma y no las palabras: los rangos excluidos se anclan en la línea de guiones, y las colas de http.sys se arman por sangría (la etiqueta de la cola se repite adentro de cada grupo de URL, así que separar por líneas en blanco habría andado de casualidad).
+**netsh habla el idioma de Windows** y escribe UTF-8 a un pipe aunque la consola sea 850, también en los nombres de las cuentas (`NT AUTHORITY\SERVICIO LOCAL`). Los parsers leen la forma y no las palabras: los rangos excluidos se anclan en la línea de guiones, las colas de http.sys se arman por sangría (la etiqueta de la cola se repite adentro de cada grupo de URL, así que separar por líneas en blanco habría andado de casualidad) y las reservas de URL toman las cuentas del SDDL, que no se traduce.
+
+**Una URL atada a una IP tiene un tercer tramo.** Un `HttpListener` en `http://127.0.0.1:8080/` queda en http.sys como `HTTP://127.0.0.1:8080:127.0.0.1/`. Sin leer ese tramo, el 8080 quedaba "sin ninguna URL a la vista" y el consejo culpaba a las de otros usuarios; apareció investigando las exclusiones de http.sys.
+
+**No toda exclusión es de WinNAT.** http.sys aparta con una fila de un solo puerto (en IPv4 y en IPv6, aunque escuche solo en `127.0.0.1`) cada puerto que atiende, y la suelta al dejar de atenderlo: el 2869 aparece cuando SSDP recibe los avisos de un dispositivo UPnP y se va a los segundos. Y cualquier programa, sin administrador, puede reservar puertos con `SIO_ACQUIRE_PORT_RESERVATION`: su fila tampoco lleva `*`. Tomar todo eso por WinNAT llevaba a aconsejar `--reserve`, que detiene WinNAT y no libera ninguno de los dos.
 
 **Un puerto de Docker son tres sockets.** `com.docker.backend` en `0.0.0.0` y `[::]`, `wslrelay` en `[::1]`, y `wslrelay` suelta el suyo 315 ms después del contenedor. Tratarlos por separado daba una fila de más en el listado y, con `--no-docker`, el consejo de `wsl --shutdown`, que apaga también a Docker.
 
@@ -824,7 +873,7 @@ El detalle, con los guiones y los números de cada capa: [docs/VERIFICACION.md](
 - **Lo que pide administrador nunca corrió como administrador.** Borrar una regla de `portproxy`, detener un servicio y dejarlo en manual, `--reserve`, `--unreserve`, `--fix-dynamic` y el camino por el UAC están probados con dobles, con el plan que imprimirían y con el proceso elevado corrido sin elevar contra procesos propios. El guion para la primera corrida está listo: [`_oracle/ADMIN.md`](internal/killport/_oracle/ADMIN.md).
 - Sin probar contra la cosa real: Podman y los contenedores de Windows (solo con respuestas grabadas), un relay de WSL colgado de verdad ([WSL#10601](https://github.com/microsoft/WSL/issues/10601) no se puede provocar a propósito) y WSL con `networkingMode=mirrored`, que no tiene `wslrelay`: ahí el puerto figura sin dueño.
 - Un nombre de host (`api.local:3000`) no se resuelve: se toma el puerto entero y se avisa.
-- Toda exclusión de puertos sin `*` (las que no agregó un administrador) se toma como un bloque de WinNAT, con sus consejos. En la PC de desarrollo apareció una que no parece de WinNAT ([PENDIENTE](docs/PENDIENTE.md#2-mejoras)).
+- De quién es una exclusión se deduce por su forma: un programa que reservara justo 100 puertos pasaría por WinNAT, y de la reserva de un programa Windows no dice cuál es (no hay una API que lo exponga).
 - El supervisor que relanza a un servidor se busca en su padre y su abuelo vivos: uno más arriba, o uno que relanza después de la ventana de verificación, no se ve.
 - `--free` da un puerto libre en ese instante; entre que lo da y que lo usás, otro programa lo puede tomar.
 - Se compila y se prueba para `windows/amd64` (el `.exe` de la release). Para Windows ARM64 compila, pero nunca corrió ahí. Lo puro compila en cualquier sistema, pero killport es solo para Windows.

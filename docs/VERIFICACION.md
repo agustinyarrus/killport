@@ -58,6 +58,7 @@ Resultados del 28/09/2026, en la PC de desarrollo (Windows 11, Docker Desktop 4.
 | carpeta de trabajo (PEB) | la carpeta con que se lanzó el proceso, y un `cd` en un cmd de 32 bits | la misma, con ñ y espacios; en WOW64 sigue el `cd` |
 | interfaces | `Get-NetIPAddress` | cada dirección con su interfaz |
 | rangos excluidos y sondeo de bind | `netsh … show excludedportrange` más un bind real a cada rango | los bloques de WinNAT dan `WSAEACCES` y la exclusión administrada deja atar |
+| de quién es cada exclusión | las tres clases provocadas a la vez, sin administrador: un `HttpListener` en tres puertos, una reserva de un programa (`SIO_ACQUIRE_PORT_RESERVATION`) y los bloques de WinNAT; y SSDP atendiendo el 2869 | http.sys: una fila de un puerto por URL, en IPv4 y en IPv6, que se va con ella; el programa: una fila de su tamaño que muere con él; WinNAT: 12 bloques de exactamente 100, sin alinear. Las tablas quedaron grabadas en `internal/ports/testdata` y las pruebas de punta a punta lo repiten con una reserva y una URL de verdad |
 | cierre prolijo | el marcador que escribe el servidor de prueba al recibir SIGINT | aparece cuando cerró por Ctrl+C; no aparece con `--force` ni con la consola compartida |
 | Docker | el CLI de `docker` (`ps --filter publish`, `inspect`) y la tabla de sockets | 49 de 49 |
 | WSL | `ss`, `pgrep` y `wsl -l --running` dentro de la distro | 31 de 31 |
@@ -113,6 +114,9 @@ Leer esas salidas enteras, como en la regresión final, encontró un defecto má
 ## Lecciones
 
 Los oráculos y las pruebas contra la máquina encontraron defectos que los tests internos no veían:
+
+- **No toda exclusión es de WinNAT.** El verificador de la separación vio el 2869 excluido y escuchado por System a la vez, y minutos después sin ninguna de las dos cosas. Midiendo: http.sys aparta con una fila de un puerto (en IPv4 y en IPv6, aunque escuche en `127.0.0.1`) cada puerto que atiende, mientras lo atiende; y cualquier programa, sin administrador, puede reservar puertos (`SIO_ACQUIRE_PORT_RESERVATION`) con una fila que tampoco lleva `*`. killport tomaba todo por WinNAT y aconsejaba `--reserve`, que detiene WinNAT sin liberar nada de eso. Ahora la forma de la fila y lo que se ve de http.sys dicen de quién es (`TestE2EReservaDeUnPrograma` falla con el diagnóstico de antes).
+- **Una URL atada a una IP tiene un tercer tramo.** `HTTP://127.0.0.1:8080:127.0.0.1/`: el parser de las colas no lo leía, y el 8080 de un `HttpListener` en `127.0.0.1` quedaba sin dueño a la vista (`TestE2EHTTPSysAtadaAUnaIP` falla con el parser de antes).
 
 - **Servicios: el PID está en 0x2C.** En `ENUM_SERVICE_STATUS_PROCESSW`, `dwProcessId` es el octavo DWORD de la estructura embebida: 0x2C, no 0x28, donde está `dwWaitHint` (0 en un servicio que corre). Con 0x28 todos los PID daban 0. El test de bytes pasaba (se armaba con el mismo offset equivocado); lo atrapó `Win32_Service`.
 - **`SOCKET_ERROR` llega sin signo.** `bind` devuelve -1 al fallar, pero en el registro de 64 bits llega como 0xFFFFFFFF, sin extender el signo: `int(r) == -1` nunca era cierto y toda falla se leía como éxito (el 135 y el 445 daban "libre"). Se compara con `r != 0`. Vale para cualquier llamada que devuelve un entero de 32 bits negativo.
