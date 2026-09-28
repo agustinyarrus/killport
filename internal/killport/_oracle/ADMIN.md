@@ -1,6 +1,6 @@
 # killport: prueba manual con administrador
 
-Las pruebas de la suite (`go test ./...`) corren sin administrador y no cambian nada de la
+Las pruebas de Go (`go test ./...`) corren sin administrador y no cambian nada de la
 máquina: no detienen servicios, no tocan la configuración de red y no pasan por el UAC (el clic
 del diálogo no se puede automatizar). Todo lo que pide administrador está probado con dobles y
 con el plan que imprimiría; **la mitad que falta es esta, y necesita una persona**.
@@ -19,7 +19,7 @@ Nada de esto toca un servicio, una regla ni una reserva que no sea de la prueba.
 puesto (se cortó la luz a mitad de camino): `pwsh _oracle\admin.ps1 -Limpiar`, en una consola de
 administrador.
 
-> **Estado:** pendiente manual, enlazado desde `docs\VERIFICACION.md` (sección killport). Este
+> **Estado:** pendiente manual, enlazado desde `docs\VERIFICACION.md` (sección "Pendiente manual"). Este
 > procedimiento y el guion se escribieron en una sesión SIN administrador. Lo que
 > se pudo comprobar ahí: el guion no tiene errores de sintaxis, sin administrador se saltea solo,
 > sus lectores de `netsh` y `sc` leen bien esta máquina, el servicio de prueba anda lanzado a
@@ -42,7 +42,7 @@ En una consola **de administrador** (Windows Terminal › clic derecho › Ejecu
 administrador), desde la raíz del repo:
 
 ```
-pwsh internal\tools\killport\_oracle\admin.ps1
+pwsh internal\killport\_oracle\admin.ps1
 ```
 
 El guion compila killport, arma cada fixture, corre killport, compara con un oráculo
@@ -71,7 +71,7 @@ Dos pasos opcionales, que tocan algo de toda la máquina (el guion avisa y deja 
 
 ## Parte B — sin administrador, por el UAC
 
-1. En la consola **de administrador**: `pwsh internal\tools\killport\_oracle\admin.ps1 -Preparar`.
+1. En la consola **de administrador**: `pwsh internal\killport\_oracle\admin.ps1 -Preparar`.
    Deja puestos la regla y el servicio, y dice dónde quedó el `killport.exe` compilado. Se puede
    volver a correr entre una prueba y otra: repone lo que la prueba anterior haya sacado.
 2. En una consola **común** (sin administrador), con ese `killport.exe`:
@@ -138,7 +138,7 @@ deja su informe** (solo escribe en sus propias carpetas de trabajo): tiene que s
 `El proceso elevado no dejó su informe` y, debajo, lo que killport verifica por su cuenta (la
 regla ya no está, el servicio quedó en manual, el puerto quedó libre). El trabajo se hace igual.
 
-3. Al terminar, en la consola de administrador: `pwsh internal\tools\killport\_oracle\admin.ps1 -Limpiar`.
+3. Al terminar, en la consola de administrador: `pwsh internal\killport\_oracle\admin.ps1 -Limpiar`.
 
 ## Lo que NO se prueba a mano, y por qué
 

@@ -1,6 +1,6 @@
 ﻿# Oráculo de punta a punta de killport contra WSL DE VERDAD (una distro real, el wslrelay real).
 #
-#   pwsh internal\tools\killport\_oracle\wsl.ps1 -Distro Ubuntu [-Killport ruta\killport.exe]
+#   pwsh internal\killport\_oracle\wsl.ps1 -Distro Ubuntu [-Killport ruta\killport.exe]
 #
 # OJO: este script ARRANCA la distro que se le pasa (killport jamás lo hace; los fixtures sí
 # necesitan correr adentro). Por eso -Distro es obligatorio: sin él se saltea. Los fixtures son
@@ -63,8 +63,8 @@ $instaladas = @((& $wsl -l -q) -split "`r?`n" | ForEach-Object { $_.Trim() } | W
 if ($instaladas -notcontains $Distro) { Write-Host "SALTEADO: la distro $Distro no está instalada (hay: $($instaladas -join ', '))"; exit 0 }
 if (-not $Killport) {
     $Killport = Join-Path $here 'killport.exe'
-    Push-Location (Join-Path $here '..\..\..\..')
-    go build -o $Killport ./cmd/killport
+    Push-Location (Join-Path $here '..\..\..')
+    go build -o $Killport .
     Pop-Location
     if ($LASTEXITCODE -ne 0) { Write-Host "no compila killport" -ForegroundColor Red; exit 1 }
 }
@@ -147,17 +147,17 @@ try {
     Verifica ((Relays) -eq $relaysAntes) "el relay sigue siendo el mismo"
 
     Paso "6. cancelar: matar al wsl.exe del lado de Windows corta el script de adentro"
-    EnLinux "rm -f /tmp/navaja-oraculo-marca" | Out-Null
+    EnLinux "rm -f /tmp/killport-oraculo-marca" | Out-Null
     $psi = [Diagnostics.ProcessStartInfo]::new($wsl, "-d $Distro -u root -e /bin/sh -s")
     $psi.RedirectStandardInput = $true; $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true
     $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true
     $p = [Diagnostics.Process]::Start($psi)
-    $p.StandardInput.Write("i=0; while [ `$i -lt 40 ]; do sleep 0.1; i=`$((i+1)); done; touch /tmp/navaja-oraculo-marca`n")
+    $p.StandardInput.Write("i=0; while [ `$i -lt 40 ]; do sleep 0.1; i=`$((i+1)); done; touch /tmp/killport-oraculo-marca`n")
     $p.StandardInput.Close()
     Start-Sleep -Milliseconds 1200
     Stop-Process -Id $p.Id -Force
     Start-Sleep -Seconds 5
-    Verifica ((EnLinux 'ls /tmp/navaja-oraculo-marca 2>/dev/null') -eq '') "el script no siguió corriendo después de morir su wsl.exe"
+    Verifica ((EnLinux 'ls /tmp/killport-oraculo-marca 2>/dev/null') -eq '') "el script no siguió corriendo después de morir su wsl.exe"
 }
 catch {
     Write-Host "  ERROR del oráculo: $_" -ForegroundColor Red
@@ -166,7 +166,7 @@ catch {
 finally {
     Paso "limpieza"
     if ((Corriendo) -contains $Distro) {
-        EnLinux "pkill -KILL -f '^python3 -m http.server'; rm -f /tmp/navaja-oraculo-marca" | Out-Null
+        EnLinux "pkill -KILL -f '^python3 -m http.server'; rm -f /tmp/killport-oraculo-marca" | Out-Null
         Verifica ((EnLinux "pgrep -f '^python3 -m http.server ($P1|$P2|$P3)'") -eq '') "ningún fixture vivo dentro de la distro"
     }
     foreach ($f in $fixtures) { if ($f -and -not $f.HasExited) { Stop-Process -Id $f.Id -Force -ErrorAction SilentlyContinue } }

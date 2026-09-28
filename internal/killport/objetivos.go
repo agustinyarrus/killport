@@ -1350,7 +1350,7 @@ func tarjeta(t *tui.Term, rep reaper.Report, manuales []resultadoManual, tambien
 	return t.Card("killport", items)
 }
 
-// codigoDeSalida traduce el reporte a los códigos de la suite.
+// codigoDeSalida traduce el reporte a los códigos de salida (cli.Exit*).
 func codigoDeSalida(rep reaper.Report) int {
 	if rep.Canceled {
 		return cli.ExitInterrupted

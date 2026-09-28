@@ -122,7 +122,7 @@ func decodificarWSL(b []byte) string {
 
 // scriptEncabezado fija un entorno predecible: C para que ss y awk no
 // traduzcan nada, y las carpetas del sistema primero.
-const scriptEncabezado = "export LC_ALL=C PATH=/usr/sbin:/usr/bin:/sbin:/bin:$PATH\necho '@navaja 1'\n"
+const scriptEncabezado = "export LC_ALL=C PATH=/usr/sbin:/usr/bin:/sbin:/bin:$PATH\necho '@killport 1'\n"
 
 // scriptDescribir describe los procesos de $pids: identidad (stat), usuario,
 // línea de comandos y los inodos de los sockets que tiene abiertos (F: con
@@ -203,7 +203,7 @@ type salida struct {
 func leerSalida(distro, out string) (salida, error) {
 	s := salida{nets: map[string]string{}, inodes: map[uint64][]uint32{}}
 	lines := strings.Split(strings.ReplaceAll(out, "\r", ""), "\n")
-	start := slices.IndexFunc(lines, func(l string) bool { return strings.TrimSpace(l) == "@navaja 1" })
+	start := slices.IndexFunc(lines, func(l string) bool { return strings.TrimSpace(l) == "@killport 1" })
 	if start < 0 {
 		return s, fmt.Errorf("%w: falta la marca de inicio (¿la distro no tiene /bin/sh?)", ErrSondeo)
 	}

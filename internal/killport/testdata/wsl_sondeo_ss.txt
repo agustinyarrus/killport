@@ -1,5 +1,5 @@
 wsl: Se detectó una configuración de proxy de localhost, pero no se refleja en WSL.
-@navaja 1
+@killport 1
 @ss
 tcp   LISTEN 0      511          0.0.0.0:3000       0.0.0.0:*    users:(("node",pid=812,fd=20))
 tcp   LISTEN 0      511             [::]:3000          [::]:*    users:(("node",pid=812,fd=21))

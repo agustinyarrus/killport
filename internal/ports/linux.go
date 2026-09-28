@@ -161,7 +161,7 @@ func parseSSAddr(s string) (netip.AddrPort, string, error) {
 // y uno que se llame `a",pid=1,fd=3` hace que esto lea el PID 1 y pierda al
 // dueño de verdad: la lectura es ambigua por construcción. Quien decide a
 // qué proceso mandarle señales no le puede creer a esto; la herramienta
-// confirma cada dueño por el inodo del socket (tools/killport/wsl_parse.go,
+// confirma cada dueño por el inodo del socket (internal/killport/wsl_parse.go,
 // atribuirPorInodo).
 func parseSSUsers(s string) []LinuxUser {
 	_, s, ok := strings.Cut(s, "users:(")

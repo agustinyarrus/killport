@@ -23,7 +23,7 @@ import (
 	"unsafe"
 )
 
-const modoHijo = "NAVAJA_WIN_HIJO"
+const modoHijo = "KILLPORT_WIN_HIJO"
 
 var procGetConsoleWindow = modkernel32.NewProc("GetConsoleWindow")
 
@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 		os.Exit(m.Run())
 	case "informe":
 		hwnd, _ := call(procGetConsoleWindow)
-		fmt.Printf("consola=%v extra=%s args=%s\n", hwnd != 0, os.Getenv("NAVAJA_EXTRA"), strings.Join(os.Args[1:], "|"))
+		fmt.Printf("consola=%v extra=%s args=%s\n", hwnd != 0, os.Getenv("KILLPORT_EXTRA"), strings.Join(os.Args[1:], "|"))
 		os.Exit(7)
 	case "nieto":
 		// Lanza un nieto SIN ningún cuidado (como haría un programa ajeno),
@@ -89,7 +89,7 @@ func muerto(t *testing.T, pid uint32) bool {
 // El caso normal: salida, código, entorno extra, argumentos con espacios, y
 // el hijo SIN consola (CREATE_NO_WINDOW: ni ventana ni consola heredada).
 func TestRunBoundedInforme(t *testing.T) {
-	res, err := hijo(t, context.Background(), "informe", Bounded{Timeout: 20 * time.Second, Env: []string{"NAVAJA_EXTRA=ñandú"}}, "a b", `c"d`)
+	res, err := hijo(t, context.Background(), "informe", Bounded{Timeout: 20 * time.Second, Env: []string{"KILLPORT_EXTRA=ñandú"}}, "a b", `c"d`)
 	if err != nil {
 		t.Fatal(err)
 	}

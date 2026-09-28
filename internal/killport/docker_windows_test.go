@@ -146,7 +146,7 @@ func TestDockerDesenmascara(t *testing.T) {
 }
 
 func TestDockerSinMotor(t *testing.T) {
-	d := dockerDe(`\\.\pipe\navaja-no-hay-motor-` + time.Now().Format("150405.000000"))
+	d := dockerDe(`\\.\pipe\killport-no-hay-motor-` + time.Now().Format("150405.000000"))
 	res := d.desenmascarar(context.Background(), []reaper.MaskedPort{mascara(5432, ports.TCP)}, reaper.NewForest(nil))
 	if res[0].Verdict != reaper.UnmaskUnavailable || res[0].Reason == "" || res[0].Advice == "" {
 		t.Fatalf("sin motor = %+v", res[0])

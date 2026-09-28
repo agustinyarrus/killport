@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/agustinyarrus/killport/internal/version"
 	"github.com/agustinyarrus/killport/internal/win"
 )
 
@@ -248,7 +249,7 @@ func TestE2EProyectoYHuerfano(t *testing.T) {
 		t.Fatalf("proyecto = %+v", pr)
 	}
 	out, _ = killportE2E(t, bin, nil, P, "--tcp", "--list")
-	if !strings.Contains(out, "proyecto: tienda › web (package.json «e2e-kp», rama e2e)") || !strings.Contains(out, "navaja ") {
+	if !strings.Contains(out, "proyecto: tienda › web (package.json «e2e-kp», rama e2e)") || !strings.Contains(out, " v"+version.Version) {
 		t.Fatalf("bloque sin el proyecto o sin la versión:\n%s", out)
 	}
 

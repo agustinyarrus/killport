@@ -70,7 +70,7 @@ func TestDialPipeHTTP(t *testing.T) {
 }
 
 func TestDialPipeNoExiste(t *testing.T) {
-	_, err := DialPipe(context.Background(), `\\.\pipe\navaja-no-existe-`+time.Now().Format("150405.000000"))
+	_, err := DialPipe(context.Background(), `\\.\pipe\killport-no-existe-`+time.Now().Format("150405.000000"))
 	if !errors.Is(err, ErrPipeNotFound) {
 		t.Fatalf("esperaba ErrPipeNotFound, dio %v", err)
 	}

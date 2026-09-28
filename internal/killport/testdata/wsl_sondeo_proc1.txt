@@ -1,4 +1,4 @@
-@navaja 1
+@killport 1
 @proc
 @net tcp
   sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode

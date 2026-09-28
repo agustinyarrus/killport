@@ -7,7 +7,7 @@ import (
 )
 
 // Help arma la ayuda completa: cabecera, uso, flags por sección, ejemplos y
-// notas, con el ancho de la ventana y el lenguaje visual de la suite.
+// notas, con el ancho de la ventana y el lenguaje visual del resto de la salida.
 func (a *App) Help(t *tui.Term) []string {
 	out := t.Header(a.Name, a.Tagline, a.Version)
 	title := func(s string) { out = append(out, tui.Margin+t.Paint(tui.Subtle, s)) }

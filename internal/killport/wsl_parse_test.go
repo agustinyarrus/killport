@@ -124,10 +124,10 @@ func TestParseSondeoProc(t *testing.T) {
 func TestParseSondeoErrores(t *testing.T) {
 	for nombre, out := range map[string]string{
 		"sin marca":     "sh: not found\n",
-		"cortado":       "@navaja 1\n@ss\ntcp LISTEN 0 1 0.0.0.0:1 0.0.0.0:*\n",
-		"sin fuente":    "@navaja 1\n@clock 1 100\n@fin\n",
-		"ss ilegible":   "@navaja 1\n@ss\nbasura total\n@fin\n",
-		"proc ilegible": "@navaja 1\n@proc\n@net tcp\n  sl local\nbasura\n@fin\n",
+		"cortado":       "@killport 1\n@ss\ntcp LISTEN 0 1 0.0.0.0:1 0.0.0.0:*\n",
+		"sin fuente":    "@killport 1\n@clock 1 100\n@fin\n",
+		"ss ilegible":   "@killport 1\n@ss\nbasura total\n@fin\n",
+		"proc ilegible": "@killport 1\n@proc\n@net tcp\n  sl local\nbasura\n@fin\n",
 	} {
 		if _, _, err := parseSondeo("X", out); err == nil {
 			t.Errorf("%s: esperaba error", nombre)
@@ -137,7 +137,7 @@ func TestParseSondeoErrores(t *testing.T) {
 	}
 	// Un proceso sin hora de arranque no tiene identidad: no se lo atribuye
 	// (no se lo podría cerrar sin riesgo de pegarle a un PID reciclado).
-	sd, _, err := parseSondeo("X", "@navaja 1\n@ss\ntcp LISTEN 0 1 0.0.0.0:3000 0.0.0.0:* users:((\"a\",pid=5,fd=1))\n@clock 1 100\n@pid 5\nS 5 (a) S\nC a\n@fin\n")
+	sd, _, err := parseSondeo("X", "@killport 1\n@ss\ntcp LISTEN 0 1 0.0.0.0:3000 0.0.0.0:* users:((\"a\",pid=5,fd=1))\n@clock 1 100\n@pid 5\nS 5 (a) S\nC a\n@fin\n")
 	if err != nil || len(sd.Procesos) != 0 || len(sd.Sockets) != 1 {
 		t.Fatalf("sin identidad = %+v / %v", sd, err)
 	}

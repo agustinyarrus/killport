@@ -7,11 +7,11 @@ import (
 // Todos los widgets devuelven texto (con el margen ya puesto) y no escriben
 // nada: son funciones puras del ancho y de si hay color, fáciles de probar.
 
-// Header es la cabecera de cada herramienta: nombre, qué hace y versión.
+// Header es la cabecera: nombre, qué hace y, a la derecha, la versión.
 func (t *Term) Header(name, tagline, version string) []string {
 	width := t.Width() - len(Margin)*2
 	left := t.Paint(Lavender, name) + t.Paint(Faint, "  ·  ") + t.Paint(Subtle, tagline)
-	right := t.Paint(Faint, "navaja "+version)
+	right := t.Paint(Faint, "v"+version)
 	gap := width - Width(left) - Width(right)
 	if gap < 2 {
 		return []string{"", Margin + left, ""}

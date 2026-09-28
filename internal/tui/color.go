@@ -1,4 +1,4 @@
-// Package tui dibuja la salida de las herramientas con un lenguaje visual
+// Package tui dibuja la salida de killport con un lenguaje visual
 // único: negro puro, acentos pastel, cero bordes duros, progreso vivo y una
 // tarjeta de resumen al final. Si la salida no es una consola (pipe, archivo)
 // degrada a texto plano sin un solo escape.

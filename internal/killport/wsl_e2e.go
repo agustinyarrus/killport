@@ -9,7 +9,7 @@ import "os"
 // máquina de pruebas no hay distros. Un ejecutable normal no tiene este
 // archivo: no hay variable de entorno que cambie qué wsl.exe corre killport.
 func init() {
-	if p := os.Getenv("NAVAJA_E2E_WSL_EXE"); p != "" {
+	if p := os.Getenv("KILLPORT_E2E_WSL_EXE"); p != "" {
 		wslExe = p
 	}
 }

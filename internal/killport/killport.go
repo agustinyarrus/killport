@@ -73,7 +73,7 @@ type opciones struct {
 
 	timeoutDado bool // se pasó --timeout (es del cierre prolijo: con --free o --wait no aplica)
 
-	version string // la de la suite, para la cabecera
+	version string // la de internal/version, para la cabecera
 
 	// elegido: del listado interactivo se eligió la fila de UN proceso en un
 	// puerto que escuchan varios; se apunta a ese (los demás quedan al margen).

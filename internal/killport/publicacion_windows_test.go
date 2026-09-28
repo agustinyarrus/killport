@@ -234,7 +234,7 @@ func TestDesenmascararPublicacionYProcesoLinux(t *testing.T) {
 	m := nuevoMotorFalso(t, pipetest.Options{})
 	f := &wslFalso{running: []string{"Ubuntu", "docker-desktop"}, sondeo: map[string]string{
 		"Ubuntu":         string(grabado(t, "wsl_sondeo_ss.txt")),
-		"docker-desktop": "@navaja 1\n@ss\ntcp LISTEN 0 4096 *:5432 *:*\n@clock 1790400000 100\n@fin\n",
+		"docker-desktop": "@killport 1\n@ss\ntcp LISTEN 0 4096 *:5432 *:*\n@clock 1790400000 100\n@fin\n",
 	}}
 	sys := sistemaFalso(t, m, f)
 	socks := append(publicado5432(), sock(ports.TCP, "127.0.0.1", 3000, ports.Listen, viaWSL.PID, ""))
@@ -255,7 +255,7 @@ func TestDesenmascararPublicacionYProcesoLinux(t *testing.T) {
 // se ofrece cerrar: el motor publica por ese mismo relay. Y el último recurso
 // avisa lo que cuesta.
 func TestWSLZombiConMotorCorriendo(t *testing.T) {
-	vacio := "@navaja 1\n@ss\n@clock 1790400000 100\n@fin\n"
+	vacio := "@killport 1\n@ss\n@clock 1790400000 100\n@fin\n"
 	f := &wslFalso{running: []string{"docker-desktop"}, sondeo: map[string]string{"docker-desktop": vacio}}
 	w := &wsl{run: f.run}
 	res := w.desenmascarar(context.Background(), []reaper.MaskedPort{mascaraWSL(3000)}, socketsDelRelay(3000), reaper.NewForest(nil), nil, true)
@@ -347,7 +347,7 @@ func TestFundirPublicaciones(t *testing.T) {
 func TestAnotarListadoPublicacion(t *testing.T) {
 	m := nuevoMotorFalso(t, pipetest.Options{})
 	f := &wslFalso{running: []string{"docker-desktop"}, sondeo: map[string]string{
-		"docker-desktop": "@navaja 1\n@ss\ntcp LISTEN 0 4096 *:5432 *:*\ntcp LISTEN 0 16 127.0.0.1:2375 0.0.0.0:* users:((\"dockerd\",pid=90,fd=7))\n" +
+		"docker-desktop": "@killport 1\n@ss\ntcp LISTEN 0 4096 *:5432 *:*\ntcp LISTEN 0 16 127.0.0.1:2375 0.0.0.0:* users:((\"dockerd\",pid=90,fd=7))\n" +
 			"@clock 1790400000 100\n@pid 90\nS 90 (dockerd) S 1 90 90 0 -1 4194560 900 0 0 0 3 1 0 0 20 0 7 0 700 1500000000 3000 18446744073709551615 1 1 0 0 0 0 0 0 0 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0\nU 0 root\nC dockerd\n@fin\n",
 	}}
 	socks := append(publicado5432(), sock(ports.TCP, "::1", 7777, ports.Listen, viaWSL.PID, ""))

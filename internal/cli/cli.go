@@ -15,7 +15,7 @@ import (
 	"github.com/agustinyarrus/killport/internal/tui"
 )
 
-// Códigos de salida comunes a toda la suite.
+// Códigos de salida de killport (los mismos con --json).
 const (
 	ExitOK          = 0   // todo salió bien
 	ExitPartial     = 1   // algunos elementos fallaron

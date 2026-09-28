@@ -26,7 +26,7 @@ import (
 // sondeoDe arma la salida del script de sondeo en una distro con ss: las
 // filas de ss, las tablas de /proc/net (tcp) y los procesos descriptos.
 func sondeoDe(ss []string, tcp []string, procs ...string) string {
-	out := []string{"@navaja 1", "@ss"}
+	out := []string{"@killport 1", "@ss"}
 	out = append(out, ss...)
 	if tcp != nil {
 		out = append(out, "@net tcp", "  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode")

@@ -100,7 +100,7 @@ func bloqueados(sys *sistema, ps ports.Set, f ports.Filter) map[uint16]reaper.Po
 	return out
 }
 
-// codigoEspera traduce el final de la espera a los códigos de la suite.
+// codigoEspera traduce el final de la espera a los códigos de salida (cli.Exit*).
 func codigoEspera(rep reaper.WatchReport) int {
 	switch rep.Outcome {
 	case reaper.WatchDone:

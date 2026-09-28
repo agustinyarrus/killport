@@ -8,8 +8,7 @@ import (
 )
 
 // Los eventos de consola que se mandan (GenerateConsoleCtrlEvent). El modo y
-// el tamaño de la consola, que usan todas las herramientas, viven en
-// internal/win/desk.
+// el tamaño de la consola propia, que usa tui, viven en internal/win/desk.
 const (
 	CtrlCEvent     = 0
 	CtrlBreakEvent = 1

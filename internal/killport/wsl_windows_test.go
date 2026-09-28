@@ -147,7 +147,7 @@ func TestWSLZombiSinDistros(t *testing.T) {
 // Dos distros: comparten el espacio de red (las dos ven el socket del 3000),
 // pero solo Debian lo resuelve a un proceso: el dueño es el de Debian.
 func TestWSLDosDistrosComparteRed(t *testing.T) {
-	ubuntu := "@navaja 1\n@ss\ntcp LISTEN 0 511 0.0.0.0:3000 0.0.0.0:*\n@clock 1790400000 100\n@fin\n"
+	ubuntu := "@killport 1\n@ss\ntcp LISTEN 0 511 0.0.0.0:3000 0.0.0.0:*\n@clock 1790400000 100\n@fin\n"
 	debian := strings.Replace(string(grabado(t, "wsl_sondeo_ss.txt")), "wsl: Se detectó", "aviso", 1)
 	f := &wslFalso{running: []string{"Ubuntu", "Debian"}, sondeo: map[string]string{"Ubuntu": ubuntu, "Debian": debian}}
 	w := &wsl{run: f.run}

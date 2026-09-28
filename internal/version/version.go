@@ -1,4 +1,4 @@
-// Package version guarda la versión de la suite. build.ps1 la pisa con -ldflags
+// Package version guarda la versión de killport. build.ps1 la pisa con -ldflags
 // (-X) para estampar el commit exacto en cada exe.
 package version
 

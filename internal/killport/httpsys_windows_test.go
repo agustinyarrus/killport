@@ -24,7 +24,7 @@ import (
 // muestraNetsh lee una muestra de la salida de netsh.
 func muestraNetsh(t *testing.T, nombre string) string {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join("..", "..", "ports", "testdata", nombre))
+	b, err := os.ReadFile(filepath.Join("..", "ports", "testdata", nombre))
 	if err != nil {
 		t.Fatal(err)
 	}

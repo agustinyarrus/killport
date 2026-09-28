@@ -5,10 +5,9 @@
 *.cmd text eol=crlf
 
 *.png binary
-*.jpg binary
 *.gif binary
-*.webp binary
-*.pdf binary
+*.webm binary
+*.mp4 binary
 *.ico binary
 
 # Los datos de prueba se guardan byte a byte: son salidas reales de Windows

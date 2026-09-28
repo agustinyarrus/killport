@@ -54,7 +54,7 @@ func binariosE2E(t *testing.T) string {
 		t.Skip("-short: sin pruebas de punta a punta")
 	}
 	e2eOnce.Do(func() {
-		e2eDir, e2eErr = os.MkdirTemp("", "navaja-killport-e2e-")
+		e2eDir, e2eErr = os.MkdirTemp("", "killport-e2e-")
 		if e2eErr != nil {
 			return
 		}
@@ -292,11 +292,11 @@ func TestE2EWSL(t *testing.T) {
 	}
 	logPath := filepath.Join(t.TempDir(), "wsl.log")
 	env := []string{
-		"NAVAJA_E2E_WSL_EXE=" + filepath.Join(dir, "wsl.exe"),
-		"NAVAJA_E2E_DISTROS=FakeDistro",
-		"NAVAJA_E2E_SS=" + ssDir,
-		"NAVAJA_E2E_DASH=" + dashOSkip(t),
-		"NAVAJA_E2E_LOG=" + logPath,
+		"KILLPORT_E2E_WSL_EXE=" + filepath.Join(dir, "wsl.exe"),
+		"KILLPORT_E2E_DISTROS=FakeDistro",
+		"KILLPORT_E2E_SS=" + ssDir,
+		"KILLPORT_E2E_DASH=" + dashOSkip(t),
+		"KILLPORT_E2E_LOG=" + logPath,
 	}
 
 	// 1. --wsl en el listado: la fila del relay dice quién escucha adentro.
@@ -353,7 +353,7 @@ func TestE2EWSLSinDistros(t *testing.T) {
 	zombi := lanzar(t, nil, filepath.Join(dir, "wslrelay.exe"), "-modo", "wsl", "-winpid", "0")
 	pz := zombi.esperarLinea(t, "PUERTO ")
 	logPath := filepath.Join(t.TempDir(), "wsl.log")
-	env := []string{"NAVAJA_E2E_WSL_EXE=" + filepath.Join(dir, "wsl.exe"), "NAVAJA_E2E_DISTROS=", "NAVAJA_E2E_LOG=" + logPath}
+	env := []string{"KILLPORT_E2E_WSL_EXE=" + filepath.Join(dir, "wsl.exe"), "KILLPORT_E2E_DISTROS=", "KILLPORT_E2E_LOG=" + logPath}
 	out, code := killportE2E(t, dir, env, pz, "--tcp", "--list")
 	if code != 0 || !strings.Contains(out, "relay colgado") {
 		t.Fatalf("killport %s --list: código %d\n%s", pz, code, out)

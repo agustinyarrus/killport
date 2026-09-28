@@ -4,13 +4,6 @@
 *.test
 *.out
 
-# Temporales de la escritura atómica (fsx.WriteAtomic)
-.*.tmp
-
-# Bytecode de Python de los oráculos (lleva rutas absolutas de la máquina)
-__pycache__/
-*.pyc
-
 # Editores y sistema
 .vscode/
 .idea/

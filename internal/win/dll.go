@@ -3,10 +3,10 @@
 // Package win reúne las llamadas crudas a la API de Windows de killport: la
 // consola de OTRO proceso (engancharse, mandarle Ctrl+C), procesos, tablas de
 // red, servicios, el ejecutor acotado de comandos externos (Job Object, sin
-// ventana, con plazo) y el cliente de named pipes. Lo que usan todas las
-// herramientas (el modo y el tamaño de la consola propia, el portapapeles)
-// vive en win/desk, para que una herramienta que solo pinta no cargue con
-// esto. Todo por syscall, sin CGO y sin dependencias externas.
+// ventana, con plazo) y el cliente de named pipes. Lo que necesita tui para
+// pintar (el modo y el tamaño de la consola propia) vive en win/desk, para que
+// la presentación no dependa de esto. Todo por syscall, sin CGO y sin
+// dependencias externas.
 package win
 
 import (

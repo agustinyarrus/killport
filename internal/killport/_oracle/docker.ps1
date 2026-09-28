@@ -1,6 +1,6 @@
 ﻿# Oráculo de punta a punta de killport contra un motor de contenedores DE VERDAD.
 #
-#   pwsh internal\tools\killport\_oracle\docker.ps1 [-Image nginx:alpine] [-Killport ruta\killport.exe]
+#   pwsh internal\killport\_oracle\docker.ps1 [-Image nginx:alpine] [-Killport ruta\killport.exe]
 #
 # Necesita Docker Desktop (o Docker Engine / Podman con el CLI `docker`) corriendo y la imagen YA
 # descargada: no baja nada. Crea tres contenedores propios (kp-prueba-oraculo-*) que publican
@@ -61,8 +61,8 @@ if ($LASTEXITCODE -ne 0) { Write-Host "SALTEADO: el motor de contenedores no con
 if ($LASTEXITCODE -ne 0) { Write-Host "SALTEADO: la imagen $Image no está descargada (el oráculo no baja nada; pasá -Image con una que tengas)"; exit 0 }
 if (-not $Killport) {
     $Killport = Join-Path $here 'killport.exe'
-    Push-Location (Join-Path $here '..\..\..\..')
-    go build -o $Killport ./cmd/killport
+    Push-Location (Join-Path $here '..\..\..')
+    go build -o $Killport .
     Pop-Location
     if ($LASTEXITCODE -ne 0) { Write-Host "no compila killport" -ForegroundColor Red; exit 1 }
 }
@@ -78,7 +78,7 @@ try {
     Paso "fixtures"
     & $docker rm -f $web $sordo $todas *> $null
     & $docker run -d --name $web --restart unless-stopped `
-        --label com.docker.compose.project=navaja --label com.docker.compose.service=web `
+        --label com.docker.compose.project=killport --label com.docker.compose.service=web `
         -p "127.0.0.1:${P1}:80" -p "127.0.0.1:${P2}:8080" $Image | Out-Null
     # PID 1 que ignora las señales: docker stop tiene que esperar t y forzar (código 137).
     & $docker run -d --name $sordo --restart always --stop-signal SIGTERM -p "127.0.0.1:${P3}:80" $Image `
@@ -97,7 +97,7 @@ try {
     Verifica (@($doc.objetivos).Count -eq 1 -and $o.tipo -eq 'contenedor') "un objetivo de tipo contenedor"
     Verifica ($o.contenedor.id -eq $idWeb) "el id coincide con docker ps --filter publish=$P1"
     Verifica ($o.contenedor.nombre -eq $web -and $o.contenedor.imagen -eq $Image) "nombre e imagen"
-    Verifica ($o.contenedor.proyecto -eq 'navaja' -and $o.contenedor.servicio -eq 'web') "proyecto y servicio de compose"
+    Verifica ($o.contenedor.proyecto -eq 'killport' -and $o.contenedor.servicio -eq 'web') "proyecto y servicio de compose"
     Verifica ($o.contenedor.reinicio -eq 'unless-stopped') "política de reinicio"
     Verifica (((@($o.contenedor.puertos.host) | Sort-Object) -join ',') -eq ((@($P1, $P2) | Sort-Object) -join ',')) "TODOS los puertos que publica ($P1 y $P2)"
     Verifica ($duenos -contains ($o.via.proceso -replace '\.exe$', '')) "via = el proceso que Windows ve como dueño ($($o.via.proceso))"
@@ -105,7 +105,7 @@ try {
 
     Paso "2. el bloque en texto"
     Corre @("$P1", '--list')
-    Verifica ($salida -match "contenedor $web" -and $salida -match 'compose navaja/web') "nombra el contenedor y su compose"
+    Verifica ($salida -match "contenedor $web" -and $salida -match 'compose killport/web') "nombra el contenedor y su compose"
     Verifica ($salida -match "se detiene entero: libera también $P2") "avisa que detenerlo libera también el $P2"
     Verifica ($salida -match 'reinicio: unless-stopped') "muestra la política de reinicio"
     Verifica ($salida -match 'no se toca') "dice que el motor no se toca"

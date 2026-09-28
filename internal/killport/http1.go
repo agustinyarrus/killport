@@ -50,7 +50,7 @@ var errHTTP = errors.New("el motor contestó algo que no es HTTP")
 // (en un pipe no importa, pero HTTP/1.1 la exige).
 func pedirHTTP(rw io.ReadWriter, method, host, path string, tope int64) (respuestaHTTP, error) {
 	var b strings.Builder
-	b.WriteString(method + " " + path + " HTTP/1.1\r\nHost: " + host + "\r\nUser-Agent: navaja-killport\r\nAccept: application/json\r\nConnection: close\r\n")
+	b.WriteString(method + " " + path + " HTTP/1.1\r\nHost: " + host + "\r\nUser-Agent: killport\r\nAccept: application/json\r\nConnection: close\r\n")
 	if method == "POST" || method == "PUT" {
 		b.WriteString("Content-Length: 0\r\n")
 	}

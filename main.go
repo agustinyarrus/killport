@@ -1,5 +1,8 @@
+//go:build windows
+
 // killport libera el puerto que necesitás: muestra quién lo ocupa, lo cierra
-// con cuidado y verifica que haya quedado libre.
+// con cuidado y verifica que haya quedado libre. Es solo para Windows: en otro
+// sistema no hay nada que compilar (lo puro de internal/ sí compila y se prueba).
 package main
 
 import (

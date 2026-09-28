@@ -73,7 +73,7 @@ var seq atomic.Int64
 
 // Name devuelve un nombre de pipe único para una prueba.
 func Name(tag string) string {
-	return fmt.Sprintf(`\\.\pipe\navaja-test-%s-%d-%d`, tag, os.Getpid(), seq.Add(1))
+	return fmt.Sprintf(`\\.\pipe\killport-test-%s-%d-%d`, tag, os.Getpid(), seq.Add(1))
 }
 
 // Listen empieza a escuchar en path. La primera instancia se crea ya (con

@@ -45,7 +45,7 @@ func TestTablaSoloWSL(t *testing.T) {
 // otro en Debian). `killport 3000` los tiene a los dos como objetivo; el
 // listado también muestra los dos, no solo el primero.
 func TestListadoWSLDosDuenos(t *testing.T) {
-	debian := "@navaja 1\n@ss\ntcp   LISTEN 0 5 0.0.0.0:3000 0.0.0.0:* users:((\"python3\",pid=70,fd=3))\n@clock 1790400000 100\n@pid 70\n" +
+	debian := "@killport 1\n@ss\ntcp   LISTEN 0 5 0.0.0.0:3000 0.0.0.0:* users:((\"python3\",pid=70,fd=3))\n@clock 1790400000 100\n@pid 70\n" +
 		"S 70 (python3) S 1 70 70 0 -1 4194560 800 0 0 0 5 2 0 0 20 0 1 0 610000 30000000 4000 18446744073709551615 1 1 0 0 0 0 0 0 0 0 0 0 17 1 0 0 0 0 0 0 0 0 0 0 0 0 0\n" +
 		"U 1000 agus\nC python3 -m http.server 3000\n@fin\n"
 	f := &wslFalso{running: []string{"Ubuntu", "Debian"}, sondeo: map[string]string{"Ubuntu": string(grabado(t, "wsl_sondeo_ss.txt")), "Debian": debian}}

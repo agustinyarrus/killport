@@ -3,14 +3,14 @@
 // wslfalso es el DOBLE de wsl.exe para las pruebas de punta a punta. Contesta
 // las dos formas en que killport llama a wsl.exe, igual que el de verdad:
 //
-//	-l --running -q                   → las distros de NAVAJA_E2E_DISTROS, en
+//	-l --running -q                   → las distros de KILLPORT_E2E_DISTROS, en
 //	                                    UTF-16LE con CRLF (como wsl.exe)
 //	-d D -u root -e /bin/sh -s        → corre el script de la entrada estándar
 //	                                    con el dash de Git for Windows (el
 //	                                    /bin/sh de Ubuntu), con el `ss` falso de
-//	                                    NAVAJA_E2E_SS en el PATH
+//	                                    KILLPORT_E2E_SS en el PATH
 //
-// Anota cada llamada en NAVAJA_E2E_LOG, para que la prueba verifique que
+// Anota cada llamada en KILLPORT_E2E_LOG, para que la prueba verifique que
 // killport nunca nombró una distro que no estaba corriendo.
 package main
 
@@ -25,12 +25,12 @@ import (
 
 func main() {
 	args := os.Args[1:]
-	if f, err := os.OpenFile(os.Getenv("NAVAJA_E2E_LOG"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
+	if f, err := os.OpenFile(os.Getenv("KILLPORT_E2E_LOG"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
 		fmt.Fprintln(f, strings.Join(args, " "))
 		f.Close()
 	}
 	var distros []string
-	for _, d := range strings.Split(os.Getenv("NAVAJA_E2E_DISTROS"), ",") {
+	for _, d := range strings.Split(os.Getenv("KILLPORT_E2E_DISTROS"), ",") {
 		if d != "" {
 			distros = append(distros, d)
 		}
@@ -51,9 +51,9 @@ func main() {
 			fmt.Fprintln(os.Stderr, "ARRANCARÍA", args[1])
 			os.Exit(99)
 		}
-		cmd := exec.Command(os.Getenv("NAVAJA_E2E_DASH"), "-s")
+		cmd := exec.Command(os.Getenv("KILLPORT_E2E_DASH"), "-s")
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-		cmd.Env = append(os.Environ(), "PATH="+os.Getenv("NAVAJA_E2E_SS")+";"+os.Getenv("PATH"))
+		cmd.Env = append(os.Environ(), "PATH="+os.Getenv("KILLPORT_E2E_SS")+";"+os.Getenv("PATH"))
 		if err := cmd.Run(); err != nil {
 			if e, ok := err.(*exec.ExitError); ok {
 				os.Exit(e.ExitCode())

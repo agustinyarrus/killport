@@ -23,7 +23,7 @@ package killport
 // archivos donde le digan.
 //
 // El clic del UAC no se puede automatizar; esa parte queda para una prueba
-// manual (docs/VERIFICACION.md › killport › "Pendiente manual", con
+// manual (docs/VERIFICACION.md › "Pendiente manual", con
 // _oracle/ADMIN.md y admin.ps1). La plomería —codificar y decodificar el trabajo,
 // crear el archivo seguro, lanzar con "runas", esperar y leer el resultado—
 // está probada de punta a punta con "open" en internal/win.
@@ -427,14 +427,14 @@ func puertosDe(plan reaper.Plan) ports.Set {
 // --- archivo de resultado ---------------------------------------------------
 
 // carpetaDeTrabajo es la carpeta de killport entre los datos locales del
-// usuario (%LOCALAPPDATA%\navaja\killport): no viaja con un perfil móvil ni se
+// usuario (%LOCALAPPDATA%\killport): no viaja con un perfil móvil ni se
 // sincroniza, y solo la escribe su dueño.
 func carpetaDeTrabajo() string {
 	local := os.Getenv("LOCALAPPDATA")
 	if local == "" {
 		return ""
 	}
-	return filepath.Join(local, "navaja", "killport")
+	return filepath.Join(local, "killport")
 }
 
 // carpetasDeResultado son las carpetas donde puede ir un archivo de resultado,

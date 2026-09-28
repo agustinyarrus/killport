@@ -1,12 +1,12 @@
 ﻿# Prueba MANUAL de killport con administrador: lo que ninguna prueba automática puede hacer.
 #
-#   pwsh internal\tools\killport\_oracle\admin.ps1                 (en una consola DE ADMINISTRADOR)
-#   pwsh internal\tools\killport\_oracle\admin.ps1 -Preparar       deja los fixtures puestos (para la parte del UAC)
-#   pwsh internal\tools\killport\_oracle\admin.ps1 -Limpiar        los saca
-#   pwsh internal\tools\killport\_oracle\admin.ps1 -ConWinnat      además, reserva un puerto tapado por WinNAT
-#   pwsh internal\tools\killport\_oracle\admin.ps1 -ConDinamico    además, corre y arregla el rango dinámico
+#   pwsh internal\killport\_oracle\admin.ps1                 (en una consola DE ADMINISTRADOR)
+#   pwsh internal\killport\_oracle\admin.ps1 -Preparar       deja los fixtures puestos (para la parte del UAC)
+#   pwsh internal\killport\_oracle\admin.ps1 -Limpiar        los saca
+#   pwsh internal\killport\_oracle\admin.ps1 -ConWinnat      además, reserva un puerto tapado por WinNAT
+#   pwsh internal\killport\_oracle\admin.ps1 -ConDinamico    además, corre y arregla el rango dinámico
 #
-# Las pruebas de la suite (go test) no detienen servicios, no tocan la configuración de red y no
+# Las pruebas de Go (go test) no detienen servicios, no tocan la configuración de red y no
 # pasan por el UAC: corren sin administrador. Este guion cubre esa mitad, con una persona delante.
 # El procedimiento completo, con lo que tiene que salir en cada paso, está en ADMIN.md.
 #
@@ -45,14 +45,14 @@ function Salir([int] $codigo) {
 }
 
 $here = $PSScriptRoot
-$raiz = (Resolve-Path (Join-Path $here '..\..\..\..')).Path
+$raiz = (Resolve-Path (Join-Path $here '..\..\..')).Path
 $fail = 0
 
 $PuertoRegla = 47999
 $PuertoServicio = 47997
 $PuertoReserva = 47998
 $Servicio = 'KillportPrueba'
-$trabajo = Join-Path $env:TEMP 'navaja-killport-admin'
+$trabajo = Join-Path $env:TEMP 'killport-admin'
 $exeServicio = Join-Path $trabajo 'serviciofalso.exe'
 
 function Paso([string] $t) { Write-Host "`n===== $t" }
@@ -123,7 +123,7 @@ function SacarRegla {
 function PonerServicio {
     New-Item -ItemType Directory -Force $trabajo | Out-Null
     Push-Location $raiz
-    go build -o $exeServicio ./internal/tools/killport/testdata/e2e/serviciofalso
+    go build -o $exeServicio ./internal/killport/testdata/e2e/serviciofalso
     $ok = $LASTEXITCODE -eq 0
     Pop-Location
     if (-not $ok) { throw 'no compila el servicio de prueba' }
@@ -164,7 +164,7 @@ if (-not $Killport) {
     New-Item -ItemType Directory -Force $trabajo | Out-Null
     $Killport = Join-Path $trabajo 'killport.exe'
     Push-Location $raiz
-    go build -o $Killport ./cmd/killport
+    go build -o $Killport .
     $ok = $LASTEXITCODE -eq 0
     Pop-Location
     if (-not $ok) { Write-Host "no compila killport" -ForegroundColor Red; Salir 1 }
