@@ -9,7 +9,7 @@ go test ./...
 .\build.ps1 -Test     # go vet + go test, y después compila
 ```
 
-592 tests: `killport` 240, `reaper` 165, `win` 96, `ports` 44, `tui` 24, `cli` 11, `win/pipeio` 9, `textdist` 2 y `win/desk` 1. No piden administrador, no cambian la configuración de la máquina y no necesitan Docker ni WSL (lo que depende de ellos se saltea solo, diciendo por qué). Las pruebas de punta a punta compilan el `killport.exe` de verdad (con la etiqueta `killport_e2e`, que solo permite cambiar qué `wsl.exe` corre) y los servidores de prueba de `internal/killport/testdata/e2e`.
+611 tests: `killport` 253, `reaper` 166, `win` 96, `ports` 49, `tui` 24, `cli` 11, `win/pipeio` 9, `textdist` 2 y `win/desk` 1. No piden administrador, no cambian la configuración de la máquina y no necesitan Docker ni WSL (lo que depende de ellos se saltea solo, diciendo por qué). Las pruebas de punta a punta compilan el `killport.exe` de verdad (con la etiqueta `killport_e2e`, que solo permite cambiar qué `wsl.exe` corre) y los servidores de prueba de `internal/killport/testdata/e2e`.
 
 ## En la CI
 
@@ -78,7 +78,9 @@ Encima, propiedades con semilla fija contra implementaciones independientes:
 - la escalada en 300 escenarios al azar; y el aviso del Ctrl+C de antes de preguntar contra lo que el motor hace después, en 600 familias de procesos al azar;
 - el puerto libre contra un oráculo puerto por puerto (400 semillas), y la espera contra otro que no usa la máquina de estados (300 historias);
 - el trabajo del proceso elevado: 82 textos que se tienen que rechazar (y 8 más mandados al `killport.exe` de verdad, que sale con `2` sin tocar nada) y 60.000 mutaciones al azar del texto; la ruta del informe, 42 rutas que se tienen que rechazar y 40.000 mutaciones;
-- la tabla del listado en 20.000 disposiciones al azar.
+- la tabla del listado en 20.000 disposiciones al azar;
+- los parsers de http.sys (las colas y las reservas de URL) en 300 salidas cada uno, con las etiquetas en un idioma inventado distinto cada vez: se leen igual, porque no leen palabras;
+- el planificador de `--reserve` en 3000 estados al azar con las cuatro clases de exclusión: WinNAT se detiene solo si un bloque suyo tapa lo pedido, y lo que tapa una de http.sys o de un programa es un impedimento.
 
 ## Mutaciones
 
