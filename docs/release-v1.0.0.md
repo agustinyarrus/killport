@@ -1,3 +1,5 @@
+<p align="right"><sub><a href="release-v1.0.0.en.md">English</a> · <b>Español</b></sub></p>
+
 # killport 1.0.0
 
 La primera versión de killport como proyecto propio. Antes vivía en navaja, la suite de herramientas de consola para Windows; el código es el que se probó ahí (más cuatro arreglos de presentación y dos de diagnóstico, cada uno con su prueba), ahora con su repo, su número de versión y su CI.

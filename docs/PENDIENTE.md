@@ -1,3 +1,5 @@
+<p align="right"><sub><a href="PENDIENTE.en.md">English</a> · <b>Español</b></sub></p>
+
 # Pendiente
 
 Lo que falta, en el orden en que conviene hacerlo. Cada punto dice qué hay hoy, qué falta y cómo se verifica.

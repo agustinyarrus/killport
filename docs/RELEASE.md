@@ -1,3 +1,5 @@
+<p align="right"><sub><a href="RELEASE.en.md">English</a> · <b>Español</b></sub></p>
+
 # Cómo se arma una release
 
 Una release de killport es una etiqueta `vX.Y.Z` y, en GitHub, tres cosas: `killport.exe`, `SHA256SUMS` y las notas (`docs/release-vX.Y.Z.md`). Nada más: no hay instalador ni paquetes, el `.exe` es el programa entero.

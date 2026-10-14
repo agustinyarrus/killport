@@ -1,3 +1,5 @@
+<p align="right"><sub><a href="ADMIN.en.md">English</a> · <b>Español</b></sub></p>
+
 # killport: prueba manual con administrador
 
 Las pruebas de Go (`go test ./...`) corren sin administrador y no cambian nada de la

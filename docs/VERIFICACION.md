@@ -1,3 +1,5 @@
+<p align="right"><sub><a href="VERIFICACION.en.md">English</a> · <b>Español</b></sub></p>
+
 # Verificación
 
 La regla: cada capa de killport se contrasta con algo **independiente**. Un parser que lee lo que escribió su propio escritor no prueba nada; netstat, `Win32_Process`, el CLI de docker o `ss` dentro de la distro sí. El [README](../README.md#cómo-se-verificó) tiene el resumen; acá están los comandos, los números y lo que se aprendió. La arquitectura que se verifica está en [ARQUITECTURA.md](ARQUITECTURA.md).

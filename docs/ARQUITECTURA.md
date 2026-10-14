@@ -1,3 +1,5 @@
+<p align="right"><sub><a href="ARQUITECTURA.en.md">English</a> · <b>Español</b></sub></p>
+
 # Arquitectura
 
 killport es un solo programa, pero no un solo paquete: la API cruda de Windows, el algoritmo y la interfaz viven separados, y lo que decide qué se cierra no sabe nada de Windows. Este documento recorre una corrida de punta a punta y después las capas, de abajo hacia arriba. El [README](../README.md#cómo-funciona) tiene el resumen; acá está el detalle, con cada decisión y su porqué. Cómo se verifica cada capa está en [VERIFICACION.md](VERIFICACION.md); lo que falta, en [PENDIENTE.md](PENDIENTE.md).

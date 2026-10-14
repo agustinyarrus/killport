@@ -1,3 +1,5 @@
+<p align="right"><sub><a href="LEEME.en.md">English</a> · <b>Español</b></sub></p>
+
 # La demo de killport
 
 `demo.gif` y `demo.webm` son una grabación de verdad, no un mockup: una terminal de 100×30 corre
